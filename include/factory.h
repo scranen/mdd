@@ -5,6 +5,9 @@
 #include <unordered_set>
 #include <unordered_map>
 
+#define DEBUG_MDD_NODES
+#include <iostream>
+
 namespace mdd
 {
 
@@ -138,6 +141,11 @@ protected:
         {
             assert(node->usecount > 0);
             ++node->usecount;
+#ifdef DEBUG_MDD_NODES
+            std::cout << "Reused " << node << "(" << node->value << ", "
+                      << node->right << ", " << node->down << ")@"
+                      << node->usecount << std::endl;
+#endif
         }
         return node;
     }
@@ -151,29 +159,40 @@ protected:
                 unuse(node->down);
                 unuse(node->right);
             }
+#ifdef DEBUG_MDD_NODES
+            std::cout << "Deleted " << node << "(" << node->value << ", "
+                      << node->right << ", " << node->down << ")@"
+                      << node->usecount << std::endl;
+#endif
         }
     }
 
     node_ptr create(const_reference val, node_ptr right=empty(), node_ptr down=emptylist())
     {
-        node_ptr newnode = new node_type(val, right, down, 0);
+        node_ptr newnode = new node_type(val, right, down, 1);
         auto result = m_nodes.insert(newnode);
         if (!result.second)
         {
             delete newnode;
             newnode = *result.first;
         }
-        if (newnode->usecount++ == 0)
+        else
         {
             use(right);
             use(down);
-            if (!result.second)
-            {
-                newnode->value = val;
-                newnode->right = right;
-                newnode->down = down;
-            }
         }
+        if (newnode->usecount == 0)
+        {
+            newnode->value = val;
+            newnode->right = right;
+            newnode->down = down;
+            newnode->usecount = 1;
+        }
+#ifdef DEBUG_MDD_NODES
+        std::cout << "Created " << newnode << "(" << newnode->value << ", "
+                  << newnode->right << ", " << newnode->down << ")@"
+                  << newnode->usecount << std::endl;
+#endif
         return newnode;
     }
 
@@ -230,7 +249,7 @@ protected:
                 result = create(a->value, a->right, temp);
             }
             else
-            // (a->value < *begin)
+            if (a->value < *begin)
             {
                 temp = add(a->right, begin, end);
                 result = create(a->value, temp, a->down);

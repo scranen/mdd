@@ -27,6 +27,7 @@ private:
     mdd(factory_type* factory, node_ptr node)
         : m_factory(factory), m_node(node)
     {}
+
 public:
     ~mdd()
     {
@@ -42,6 +43,7 @@ public:
     mdd_type& operator=(const mdd_type& other)
     {
         assert(m_factory == other.m_factory);
+        m_factory->unuse(m_node);
         m_node = m_factory->use(other.m_node);
         return *this;
     }

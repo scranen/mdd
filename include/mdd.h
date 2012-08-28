@@ -98,6 +98,27 @@ public:
     {
         parent::print_nodes(s, hint1.m_node, hint2.m_node);
     }
+
+    std::string print_nodes()
+    {
+        std::stringstream s;
+        print_nodes(s);
+        return s.str();
+    }
+
+    std::string print_nodes(const mdd_type& hint1)
+    {
+        std::stringstream s;
+        print_nodes(s, hint1);
+        return s.str();
+    }
+
+    std::string print_nodes(const mdd_type& hint1, const mdd_type& hint2)
+    {
+        std::stringstream s;
+        print_nodes(s, hint1, hint2);
+        return s.str();
+    }
 };
 
 }

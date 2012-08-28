@@ -1,3 +1,5 @@
+// #define DEBUG_MDD_NODES
+
 #include <gtest/gtest.h>
 #include <mdd.h>
 
@@ -27,30 +29,13 @@ protected:
 
 TEST_F(MDDTest, CreateIntMDD)
 {
-    EXPECT_EQ(0, strfactory.size());
+    EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
     {
         mdd::mdd<std::string> m = strfactory.empty();
-        m = m + strvec1; // [10]
-
-        // strfactory.print_nodes(std::cout, m);
-        // std::cout << "[----------]\n";
-
-        m = m + strvec2; // [10, 11]
-
-        // strfactory.print_nodes(std::cout, m);
-        // std::cout << "[----------]\n";
-
-        m = m + strvec3; // [3, 4]
-        m = m + strvec3; // [3, 4]
-
-        // strfactory.print_nodes(std::cout, m);
-        // std::cout << "[----------]\n";
-
-        mdd::mdd<std::string> m2 = m | m;
-        EXPECT_EQ(m, m2);
-
-        // strfactory.print_nodes(std::cout, m, m2);
-        // std::cout << "[----------]\n";
+        m = m + strvec1; // [a]
+        m = m + strvec2; // [a, b]
+        m = m + strvec3; // [b, c]
+        m = m + strvec3; // [b, c]
 
         /*
         std::list<std::vector<int> > contents;
@@ -69,10 +54,48 @@ TEST_F(MDDTest, CreateIntMDD)
              ADD_FAILURE() << "contents was:\n" << ::testing::PrintToString(contents);
         */
         strfactory.clean();
-        EXPECT_EQ(4, strfactory.size());
+        EXPECT_EQ(4, strfactory.size()) << strfactory.print_nodes();
     }
     strfactory.clean();
     strfactory.print_nodes(std::cout);
+    EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
+}
+
+TEST_F(MDDTest, SetUnion)
+{
+    EXPECT_EQ(0, strfactory.size());
+    {
+        mdd::mdd<std::string> m1 = strfactory.empty(),
+                              m2 = strfactory.empty();
+        m1 = m1 + strvec1; // [a]
+        m2 = m2 + strvec2; // [a, b]
+
+        EXPECT_EQ(m1 | m2, m1 | m2 | m2) << strfactory.print_nodes(m1, m2);
+
+        m2 = m2 + strvec3; // [b, c]
+        m1 = m2 | m1;
+        m2 = m1 | m2;
+
+        EXPECT_EQ(m1, m2) << strfactory.print_nodes(m1, m2);
+
+        size_t hits = strfactory.cache_hits(),
+               misses = strfactory.cache_misses();
+
+        m1 = strfactory.empty();
+        m1 = m1 + strvec1; // [a]
+        m2 = strfactory.empty();
+        m2 = m2 + strvec2; // [a, b]
+
+        m1 | m2; // Seen before: cache hit
+        m2 | m1; // Seen before in different order: cache hit
+        m1 | m1; // Union of equal elements: trivial case
+        m2 | strfactory.empty(); // Union with empty set: trivial case
+        strfactory.empty() | m2; // Union with empty set: trivial case
+
+        EXPECT_EQ(hits + 2, strfactory.cache_hits());
+        EXPECT_EQ(misses, strfactory.cache_misses());
+    }
+    strfactory.clean();
     EXPECT_EQ(0, strfactory.size());
 }
 

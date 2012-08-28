@@ -5,8 +5,10 @@
 #include <unordered_set>
 #include <unordered_map>
 
-// #define DEBUG_MDD_NODES
-// #include <iostream>
+#ifdef DEBUG_MDD_NODES
+#include <iostream>
+#endif // DEBUG_MDD_NODES
+#include <sstream>
 
 namespace mdd
 {
@@ -119,6 +121,9 @@ public:
 private:
     hashtable m_nodes;
     cachemap m_cache;
+
+    size_type m_cache_misses;
+    size_type m_cache_hits;
 protected:
 
     /*************************************************************************************************
@@ -133,7 +138,7 @@ protected:
     {
         if (!is_sentinel(node))
         {
-            assert(node->usecount > 0);
+            //assert(node->usecount > 0);
             if (++node->usecount == 1)
             {
                 use(node->right);
@@ -172,7 +177,20 @@ protected:
         if (!result.second)
         {
             delete newnode;
-            newnode = use(*result.first);
+            if (newnode->usecount == 0)
+            {
+                newnode->value = val;
+                newnode->right = use(right);
+                newnode->down = use(down);
+                newnode->usecount = 1;
+#ifdef DEBUG_MDD_NODES
+        std::cout << "Undeleted " << newnode << "(" << newnode->value << ", "
+                  << newnode->right << ", " << newnode->down << ")@"
+                  << newnode->usecount << std::endl;
+#endif
+            }
+            else
+                newnode = use(*result.first);
         }
         else
         {
@@ -184,18 +202,7 @@ protected:
                   << newnode->usecount << std::endl;
 #endif
         }
-        if (newnode->usecount == 0)
-        {
-            newnode->value = val;
-            newnode->right = use(right);
-            newnode->down = use(down);
-            newnode->usecount = 1;
-#ifdef DEBUG_MDD_NODES
-        std::cout << "Undeleted " << newnode << "(" << newnode->value << ", "
-                  << newnode->right << ", " << newnode->down << ")@"
-                  << newnode->usecount << std::endl;
-#endif
-        }
+
         return newnode;
     }
 
@@ -204,14 +211,16 @@ protected:
      *************************************************************************************************/
 
     inline
-    bool cache_lookup(typename cacherecord_type::operation op, node_ptr a, node_ptr b, node_ptr& result) const
+    bool cache_lookup(typename cacherecord_type::operation op, node_ptr a, node_ptr b, node_ptr& result)
     {
         auto it = m_cache.find(cacherecord_type(op, a, b));
         if (it != m_cache.end())
         {
+            ++m_cache_hits;
             result = it->second;
             return true;
         }
+        ++m_cache_misses;
         return false;
     }
 
@@ -257,7 +266,7 @@ protected:
             return add_emptylist(a);
 
         if (cache_lookup(cacherecord_type::set_union, a, b, result))
-            return result;
+            return use(result);
 
         if (a->value < b->value)
         {
@@ -341,6 +350,10 @@ protected:
     }
 
 public:
+    node_factory()
+        : m_cache_hits(0), m_cache_misses(0)
+    {}
+
     size_type size() { return m_nodes.size(); }
 
     /**
@@ -357,25 +370,27 @@ public:
         }
     }
 
+    size_type cache_hits() const
+    {
+        return m_cache_hits;
+    }
+
+    size_type cache_misses() const
+    {
+        return m_cache_misses;
+    }
+
     // For debugging purposes
     /**
      * @brief Dumps the contents of the node buffer to stream s.
      * @param s The stream to dump the information to.
-     * @param hint1 If given (and not equal to empty()), this pointer is labelled "1"
-     * @param hint2 If given (and not equal to empty()), this pointer is labelled "2"
+     * @param hint1 If given (and not equal to empty()), this pointer is labelled "*"
+     * @param hint2 If given (and not equal to empty()), this pointer is labelled "+"
      */
     void print_nodes(std::ostream& s, node_ptr hint1 = empty(), node_ptr hint2 = empty())
     {
         std::unordered_map<node_ptr, uintptr_t> nummap;
         uintptr_t last = 1;
-        if (hint2 != empty())
-        {
-            nummap[hint1] = last++;
-            nummap[hint2] = last++;
-        }
-        else
-        if (hint1 != empty())
-            nummap[hint1] = last++;
         for (auto it = m_nodes.begin(); it != m_nodes.end(); ++it)
         {
             node_ptr node = *it;
@@ -386,7 +401,12 @@ public:
             uintptr_t& numd = nummap[node->down];
             if (!is_sentinel(node->down) && numd == 0) numd = last++;
 
-            s << num << "(" << node->value << ", ";
+            s << num;
+            if (node == hint1)
+                s << "*";
+            if (node == hint2)
+                s << "+";
+            s << "(" << node->value << ", ";
             if (node->right == empty()) s << "FALSE, "; else
             if (node->right == emptylist()) s << "TRUE, "; else
                 s << numr << ", ";
@@ -396,6 +416,7 @@ public:
             s << node->usecount << std::endl;
         }
     }
+
 };
 
 }

@@ -57,7 +57,7 @@ public:
     mdd_type operator|(const mdd_type& other) const
     {
         assert(m_factory == other.m_factory);
-        return mdd_type(m_factory, m_factory->merge(m_node, other.m_node));
+        return mdd_type(m_factory, m_factory->set_union(m_node, other.m_node));
     }
 
     template <typename iterable>

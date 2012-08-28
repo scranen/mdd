@@ -100,19 +100,8 @@ struct cacherecord
     };
 
     cacherecord(operation op, node_ptr arg1, node_ptr arg2)
-        : m_operation(op)
-    {
-        if (arg1 > arg2)
-        {
-            m_arg1 = arg2;
-            m_arg2 = arg1;
-        }
-        else
-        {
-            m_arg1 = arg1;
-            m_arg2 = arg2;
-        }
-    }
+        : m_operation(op), m_arg1(arg1), m_arg2(arg2)
+    { }
 };
 
 template <typename Value>
@@ -131,6 +120,11 @@ private:
     hashtable m_nodes;
     cachemap m_cache;
 protected:
+
+    /*************************************************************************************************
+     * Memory management operations and node creation.
+     *************************************************************************************************/
+
     static node_ptr empty() { return static_cast<node_ptr>(0); }
     static node_ptr emptylist() { return reinterpret_cast<node_ptr>(1); }
     static bool is_sentinel(node_ptr a) { return reinterpret_cast<uintptr_t>(a) < 2; }
@@ -205,8 +199,12 @@ protected:
         return newnode;
     }
 
+    /*************************************************************************************************
+     * Operations used for caching and optimisation
+     *************************************************************************************************/
+
     inline
-    bool cache_lookup(typename cacherecord_type::operation op, node_ptr a, node_ptr b, node_ptr& result)
+    bool cache_lookup(typename cacherecord_type::operation op, node_ptr a, node_ptr b, node_ptr& result) const
     {
         auto it = m_cache.find(cacherecord_type(op, a, b));
         if (it != m_cache.end())
@@ -217,12 +215,86 @@ protected:
         return false;
     }
 
-    node_ptr merge(node_ptr a, node_ptr b)
+    inline
+    void cache_store(typename cacherecord_type::operation op, node_ptr a, node_ptr b, node_ptr result)
+    {
+        m_cache.insert(std::make_pair(cacherecord_type(op, a, b), result));
+    }
+
+    inline
+    void order(node_ptr& a, node_ptr& b) const
+    {
+        if (b < a)
+        {
+            node_ptr tmp = a;
+            a = b;
+            b = tmp;
+        }
+    }
+
+    /*************************************************************************************************
+     * Operations on sets
+     *************************************************************************************************/
+
+    /**
+     * @brief Computes the union of two sets.
+     * @param a
+     * @param b
+     * @return
+     */
+    node_ptr set_union(node_ptr a, node_ptr b)
     {
         node_ptr result;
+        order(a, b);
+
+        if (a == b || b == empty())
+            return use(a);
+        if (a == empty())
+            return use(b);
+        if (a == emptylist())
+            return add_emptylist(b);
+        if (b == emptylist())
+            return add_emptylist(a);
+
         if (cache_lookup(cacherecord_type::set_union, a, b, result))
             return result;
-        return empty();
+
+        if (a->value < b->value)
+        {
+            node_ptr temp = set_union(a->right, b);
+            result = create(a->value, temp, a->down);
+            unuse(temp);
+        }
+        else
+        if (a->value == b->value)
+        {
+            node_ptr temp1 = set_union(a->right, b->right),
+                     temp2 = set_union(a->down, b->down);
+            result = create(a->value, temp1, temp2);
+            unuse(temp1);
+            unuse(temp2);
+        }
+        else
+        {
+            node_ptr temp = set_union(a, b->right);
+            result = create(b->value, temp, b->down);
+            unuse(temp);
+        }
+
+        cache_store(cacherecord_type::set_union, a, b, result);
+        return result;
+    }
+
+    /**
+     * @brief Shortcut for adding an empty list to MDD a. This method simply calls add(a, b, e)
+     *        with (b == e).
+     * @param a
+     * @return
+     */
+    inline
+    node_ptr add_emptylist(node_ptr a)
+    {
+        return add(a, static_cast<value_type*>(nullptr), static_cast<value_type*>(nullptr));
     }
 
     /**
@@ -285,6 +357,13 @@ public:
         }
     }
 
+    // For debugging purposes
+    /**
+     * @brief Dumps the contents of the node buffer to stream s.
+     * @param s The stream to dump the information to.
+     * @param hint1 If given (and not equal to empty()), this pointer is labelled "1"
+     * @param hint2 If given (and not equal to empty()), this pointer is labelled "2"
+     */
     void print_nodes(std::ostream& s, node_ptr hint1 = empty(), node_ptr hint2 = empty())
     {
         std::unordered_map<node_ptr, uintptr_t> nummap;

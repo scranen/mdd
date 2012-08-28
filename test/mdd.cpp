@@ -46,7 +46,7 @@ TEST_F(MDDTest, CreateIntMDD)
         // strfactory.print_nodes(std::cout, m);
         // std::cout << "[----------]\n";
 
-        mdd::mdd<std::string> m2 = m + strvec1;
+        mdd::mdd<std::string> m2 = m | m;
         EXPECT_EQ(m, m2);
 
         // strfactory.print_nodes(std::cout, m, m2);

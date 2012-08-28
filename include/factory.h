@@ -5,8 +5,8 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#define DEBUG_MDD_NODES
-#include <iostream>
+// #define DEBUG_MDD_NODES
+// #include <iostream>
 
 namespace mdd
 {
@@ -140,7 +140,11 @@ protected:
         if (!is_sentinel(node))
         {
             assert(node->usecount > 0);
-            ++node->usecount;
+            if (++node->usecount == 1)
+            {
+                use(node->right);
+                use(node->down);
+            }
 #ifdef DEBUG_MDD_NODES
             std::cout << "Reused " << node << "(" << node->value << ", "
                       << node->right << ", " << node->down << ")@"
@@ -174,25 +178,30 @@ protected:
         if (!result.second)
         {
             delete newnode;
-            newnode = *result.first;
+            newnode = use(*result.first);
         }
         else
         {
             use(right);
             use(down);
-        }
-        if (newnode->usecount == 0)
-        {
-            newnode->value = val;
-            newnode->right = right;
-            newnode->down = down;
-            newnode->usecount = 1;
-        }
 #ifdef DEBUG_MDD_NODES
         std::cout << "Created " << newnode << "(" << newnode->value << ", "
                   << newnode->right << ", " << newnode->down << ")@"
                   << newnode->usecount << std::endl;
 #endif
+        }
+        if (newnode->usecount == 0)
+        {
+            newnode->value = val;
+            newnode->right = use(right);
+            newnode->down = use(down);
+            newnode->usecount = 1;
+#ifdef DEBUG_MDD_NODES
+        std::cout << "Undeleted " << newnode << "(" << newnode->value << ", "
+                  << newnode->right << ", " << newnode->down << ")@"
+                  << newnode->usecount << std::endl;
+#endif
+        }
         return newnode;
     }
 
@@ -261,6 +270,20 @@ protected:
 
 public:
     size_type size() { return m_nodes.size(); }
+
+    /**
+     * @brief Removes all unused nodes from the storage.
+     */
+    void clean()
+    {
+        for (auto it = m_nodes.begin(); it != m_nodes.end();)
+        {
+            if ((*it)->usecount == 0)
+                it = m_nodes.erase(it);
+            else
+                ++it;
+        }
+    }
 
     void print_nodes(std::ostream& s, node_ptr hint1 = empty(), node_ptr hint2 = empty())
     {

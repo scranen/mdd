@@ -84,6 +84,12 @@ public:
     typedef const node<Value>* node_ptr;
 
     mdd_type empty() { return mdd_type(this, parent::empty()); }
+
+    // For debugging purposes:
+    void print_nodes(std::ostream& s)
+    {
+        parent::print_nodes(s);
+    }
     void print_nodes(std::ostream& s, const mdd_type& hint1)
     {
         parent::print_nodes(s, hint1.m_node);

@@ -32,23 +32,25 @@ TEST_F(MDDTest, CreateIntMDD)
         mdd::mdd<std::string> m = strfactory.empty();
         m = m + strvec1; // [10]
 
-        strfactory.print_nodes(std::cout, m);
-        std::cout << "[-----------]\n";
+        // strfactory.print_nodes(std::cout, m);
+        // std::cout << "[----------]\n";
 
         m = m + strvec2; // [10, 11]
 
-        strfactory.print_nodes(std::cout, m);
-        std::cout << "[-----------]\n";
+        // strfactory.print_nodes(std::cout, m);
+        // std::cout << "[----------]\n";
 
         m = m + strvec3; // [3, 4]
+        m = m + strvec3; // [3, 4]
 
-        strfactory.print_nodes(std::cout, m);
-        std::cout << "[-----------]\n";
+        // strfactory.print_nodes(std::cout, m);
+        // std::cout << "[----------]\n";
 
         mdd::mdd<std::string> m2 = m + strvec1;
         EXPECT_EQ(m, m2);
 
-        strfactory.print_nodes(std::cout, m, m2);
+        // strfactory.print_nodes(std::cout, m, m2);
+        // std::cout << "[----------]\n";
 
         /*
         std::list<std::vector<int> > contents;
@@ -66,9 +68,11 @@ TEST_F(MDDTest, CreateIntMDD)
         if (HasFailure())
              ADD_FAILURE() << "contents was:\n" << ::testing::PrintToString(contents);
         */
-
+        strfactory.clean();
         EXPECT_EQ(4, strfactory.size());
     }
+    strfactory.clean();
+    strfactory.print_nodes(std::cout);
     EXPECT_EQ(0, strfactory.size());
 }
 

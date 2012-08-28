@@ -124,6 +124,7 @@ private:
 
     size_type m_cache_misses;
     size_type m_cache_hits;
+    size_type m_cache_stores;
 protected:
 
     /*************************************************************************************************
@@ -227,7 +228,12 @@ protected:
     inline
     void cache_store(typename cacherecord_type::operation op, node_ptr a, node_ptr b, node_ptr result)
     {
+        ++m_cache_stores;
+#ifndef NDEBUG
+        auto it =
+#endif
         m_cache.insert(std::make_pair(cacherecord_type(op, a, b), result));
+        assert(it.second);
     }
 
     inline
@@ -247,9 +253,9 @@ protected:
 
     /**
      * @brief Computes the union of two sets.
-     * @param a
-     * @param b
-     * @return
+     * @param a An MDD.
+     * @param b An MDD.
+     * @return The set union of a and b.
      */
     node_ptr set_union(node_ptr a, node_ptr b)
     {
@@ -308,10 +314,10 @@ protected:
 
     /**
      * @brief Adds a list of elements to the MDD.
-     * @param a
-     * @param begin
-     * @param end
-     * @return
+     * @param a The MDD to add a vector to.
+     * @param begin The start of the vector (any iterator).
+     * @param end The end of the vector (any iterator comparable to begin).
+     * @return An MDD that represents a with the provided vector added to it.
      */
     template <typename iterator>
     node_ptr add(node_ptr a, iterator begin, iterator end)
@@ -350,14 +356,25 @@ protected:
     }
 
 public:
+    /**
+     * @brief Constructor.
+     */
     node_factory()
         : m_cache_hits(0), m_cache_misses(0)
     {}
 
+    /**
+     * @brief Returns the amount of MDD nodes that reside in memory. This includes unused
+     *        nodes (use clean() to remove these).
+     * @return The number of MDD nodes in memory.
+     */
     size_type size() { return m_nodes.size(); }
 
     /**
-     * @brief Removes all unused nodes from the storage.
+     * @brief Removes all unused nodes from the storage. Note that it is necessary to
+     *        either remove *all* unused nodes, or remove none: if an unused node is
+     *        removed that is still used by another unused node that is not removed,
+     *        then undeleting the latter will cause problems.
      */
     void clean()
     {
@@ -370,11 +387,21 @@ public:
         }
     }
 
+    /**
+     * @brief Returns the total number of cache hits since the factory was created. Together
+     *        with cache_misses(), this provides information about the amount of non-trivial
+     *        MDD operations requested from this object.
+     */
     size_type cache_hits() const
     {
         return m_cache_hits;
     }
 
+    /**
+     * @brief Returns the total number of cache misses since the factory was created. This is
+     *        a good measure for the actual amount of work done, as trivial cases in MDD
+     *        operations are not cached.
+     */
     size_type cache_misses() const
     {
         return m_cache_misses;

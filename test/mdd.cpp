@@ -27,7 +27,7 @@ protected:
     std::vector<float> floatvec3;
 };
 
-TEST_F(MDDTest, CreateIntMDD)
+TEST_F(MDDTest, CreateStringMDD)
 {
     EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
     {
@@ -57,7 +57,6 @@ TEST_F(MDDTest, CreateIntMDD)
         EXPECT_EQ(4, strfactory.size()) << strfactory.print_nodes();
     }
     strfactory.clean();
-    strfactory.print_nodes(std::cout);
     EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
 }
 

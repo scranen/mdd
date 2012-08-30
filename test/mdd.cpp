@@ -55,9 +55,9 @@ TEST_F(MDDTest, CreateStringMDD)
     {
         mdd::mdd<std::string> m = strfactory.empty();
         m = m + strvec1; // [a]
-        m = m + strvec2; // [a, b]
+        m += strvec2;    // [a, b]
         m = m + strvec3; // [b, c]
-        m = m + strvec3; // [b, c]
+        m += strvec3;    // [b, c]
 
         auto result = std::find(m.begin(), m.end(), strvec1);
         EXPECT_NE(m.end(), result);
@@ -114,6 +114,32 @@ TEST_F(MDDTest, SetUnion)
         EXPECT_EQ(misses, strfactory.cache_misses()) << "m1: " << ::testing::PrintToString(m1)
                                                      << "\nm2: " << ::testing::PrintToString(m2)
                                                      << "\n" << strfactory.print_nodes(m1, m2);
+    }
+    strfactory.clear_cache();
+    strfactory.clean();
+    EXPECT_EQ(0, strfactory.size());
+}
+
+
+TEST_F(MDDTest, SetIntersect)
+{
+    mdd::mdd_factory<std::string> strfactory;
+    EXPECT_EQ(0, strfactory.size());
+    {
+        mdd::mdd<std::string> m1 = strfactory.empty(),
+                              m2 = strfactory.empty();
+        m1 += strvec1; // [a]
+        m2 += strvec2; // [a, b]
+        m2 += strvec3; // [b, c]
+
+        EXPECT_EQ(m1 & m2, m1 & m2 & m2);
+
+        m1 += strvec2;
+        m1 += strvec3;
+
+        EXPECT_EQ(m2, m1 & m2);
+        EXPECT_EQ(strfactory.empty(), m1 & strfactory.empty());
+        EXPECT_EQ(strfactory.empty(), strfactory.empty() & m2);
     }
     strfactory.clear_cache();
     strfactory.clean();

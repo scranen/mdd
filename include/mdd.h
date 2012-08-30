@@ -84,7 +84,7 @@ private:
 
     template<typename Functor>
     inline
-    mdd_type apply_in_place(const mdd_type& other) const
+    mdd_type& apply_in_place(const mdd_type& other)
     {
         assert(m_factory == other.m_factory);
         node_ptr newnode = Functor(*m_factory)(m_node, other.m_node);
@@ -102,7 +102,7 @@ private:
 
     template<typename Functor, typename... Args>
     inline
-    mdd_type apply_in_place(Args... args) const
+    mdd_type& apply_in_place(Args... args)
     {
         node_ptr newnode = Functor(*m_factory)(m_node, args...);
         m_node->unuse();
@@ -187,23 +187,25 @@ m += v;    // efficient
      * @return The mdd with \p list added to it.
      */
     template <typename iterable>
+    inline
     mdd_type operator+(iterable list) const
-    { return apply<typename factory_type::mdd_add_element>(list.begin(), list.end()); }
+    { return add(list.begin(), list.end()); }
 
     /**
      * @brief Efficient addition-assignment.
      * @see operator+()
      */
     template <typename iterable>
-    mdd_type& operator+=(iterable list) const
-    { return apply_in_place<typename factory_type::mdd_add_element>(list.begin(), list.end()); }
+    inline
+    mdd_type& operator+=(iterable list)
+    { return add_in_place(list.begin(), list.end()); }
 
     template <typename iterator>
-    mdd_type add(iterator begin, iterator end)
+    mdd_type add(iterator begin, iterator end) const
     { return apply<typename factory_type::mdd_add_element>(begin, end); }
 
     template <typename iterator>
-    mdd_type add_in_place(iterator begin, iterator end)
+    mdd_type& add_in_place(iterator begin, iterator end)
     { return apply_in_place<typename factory_type::mdd_add_element>(begin, end); }
 
     bool operator==(const mdd_type& other) const

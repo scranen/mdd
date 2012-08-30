@@ -2,8 +2,9 @@
 #define __scranen_mdd_mdd_factory_h
 
 #include "node_factory.h"
-#include "operations/set_union.h"
 #include "operations/add_element.h"
+#include "operations/set_union.h"
+#include "operations/set_intersect.h"
 
 namespace mdd
 {

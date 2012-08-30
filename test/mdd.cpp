@@ -40,6 +40,7 @@ protected:
         floatvec2.push_back(3.0);
     }
 
+    std::vector<std::string> strvec0;
     std::vector<std::string> strvec1;
     std::vector<std::string> strvec2;
     std::vector<std::string> strvec3;
@@ -58,6 +59,8 @@ TEST_F(MDDTest, CreateStringMDD)
         m += strvec2;    // [a, b]
         m = m + strvec3; // [b, c]
         m += strvec3;    // [b, c]
+
+        EXPECT_EQ(strfactory.emptylist(), strfactory.empty() + strvec0);
 
         auto result = std::find(m.begin(), m.end(), strvec1);
         EXPECT_NE(m.end(), result);
@@ -127,7 +130,9 @@ TEST_F(MDDTest, SetIntersect)
     EXPECT_EQ(0, strfactory.size());
     {
         mdd::mdd<std::string> m1 = strfactory.empty(),
-                              m2 = strfactory.empty();
+                              m2 = strfactory.empty(),
+                              el = strfactory.emptylist();
+
         m1 += strvec1; // [a]
         m2 += strvec2; // [a, b]
         m2 += strvec3; // [b, c]
@@ -140,6 +145,13 @@ TEST_F(MDDTest, SetIntersect)
         EXPECT_EQ(m2, m1 & m2);
         EXPECT_EQ(strfactory.empty(), m1 & strfactory.empty());
         EXPECT_EQ(strfactory.empty(), strfactory.empty() & m2);
+        EXPECT_EQ(strfactory.empty(), el & m2);
+        EXPECT_EQ(strfactory.empty(), m1 & el);
+        EXPECT_EQ(el, el & el);
+
+        m1 += strvec0;
+
+        EXPECT_EQ(el, el & m1);
     }
     strfactory.clear_cache();
     strfactory.clean();

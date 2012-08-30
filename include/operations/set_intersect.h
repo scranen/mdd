@@ -30,6 +30,10 @@ struct node_factory<Value>::mdd_set_intersect
             return a;
         if (b == m_factory.empty())
             return b;
+        if (a == m_factory.emptylist())
+            return operator()(a, b->right);
+        if (b == m_factory.emptylist())
+            return operator()(a->right, b);
 
         if (m_factory.m_cache.lookup(cache_set_intersection, a, b, result))
             return result->use();

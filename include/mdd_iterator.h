@@ -42,6 +42,7 @@ public:
 
     mdd_iterator<Value>& operator++()
     {
+        m_stack.pop();
         next();
         saturate();
         return *this;
@@ -50,6 +51,7 @@ public:
     mdd_iterator<Value> operator++(int)
     {
         mdd_iterator<Value> result(*this);
+        m_stack.pop();
         next();
         saturate();
         return result;
@@ -83,7 +85,6 @@ private:
                 }
                 else // m_stack.top() == m_factory.emptylist()
                 {
-                    m_stack.pop();
                     done = true;
                 }
             }
@@ -99,8 +100,6 @@ private:
     {
         if (m_stack.empty())
         {
-            if (m_vector.empty())
-                throw std::runtime_error("Trying to increase MDD end() iterator.");
             m_vector.clear();
         }
         else

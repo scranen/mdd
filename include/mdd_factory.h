@@ -28,6 +28,12 @@ public:
      */
     mdd_type empty() { return mdd_type(this, parent::empty()); }
 
+    /**
+     * @brief Returns an MDD that only contains the empty list.
+     * @return An mdd::mdd containing only the empty list.
+     */
+    mdd_type emptylist() { return mdd_type(this, parent::emptylist()); }
+
     // For debugging purposes:
     void print_nodes(std::ostream& s)
     {

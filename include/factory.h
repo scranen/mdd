@@ -23,8 +23,7 @@ struct node
     {
         bool operator()(const node_ptr& a, const node_ptr& b) const
         {
-            return (a->usecount == 0) || (b->usecount == 0) ||
-                   (a->value == b->value && a->right == b->right && a->down == b->down);
+            return (a->value == b->value && a->right == b->right && a->down == b->down);
         }
     };
 
@@ -103,13 +102,20 @@ struct cacherecord
 
     cacherecord(operation op, node_ptr arg1, node_ptr arg2)
         : m_operation(op), m_arg1(arg1), m_arg2(arg2)
-    { }
+    {
+
+    }
 };
+
+template <typename Value>
+class mdd_iterator;
 
 template <typename Value>
 class node_factory
 {
 public:
+    friend class mdd_iterator<Value>;
+
     typedef Value value_type;
     typedef const value_type& const_reference;
     typedef node<value_type> node_type;
@@ -178,6 +184,7 @@ protected:
         if (!result.second)
         {
             delete newnode;
+            newnode = *result.first;
             if (newnode->usecount == 0)
             {
                 newnode->value = val;
@@ -191,7 +198,7 @@ protected:
 #endif
             }
             else
-                newnode = use(*result.first);
+                newnode = use(newnode);
         }
         else
         {

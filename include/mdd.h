@@ -2,6 +2,7 @@
 #define __scranen_mdd_mdd_h
 
 #include <factory.h>
+#include <iterator.h>
 
 namespace mdd
 {
@@ -15,16 +16,18 @@ class mdd
 public:
     friend class mdd_factory<Value>;
 
+    typedef mdd_iterator<Value> iterator;
+    typedef const mdd_iterator<Value> const_iterator;
     typedef Value& reference;
     typedef const Value& const_reference;
     typedef mdd<Value> mdd_type;
-    typedef mdd_factory<Value> factory_type;
-    typedef typename factory_type::node_ptr node_ptr;
+    typedef mdd_factory<Value>* factory_ptr;
+    typedef typename mdd_factory<Value>::node_ptr node_ptr;
 private:
-    factory_type* m_factory;
+    factory_ptr m_factory;
     node_ptr m_node;
 
-    mdd(factory_type* factory, node_ptr node)
+    mdd(factory_ptr factory, node_ptr node)
         : m_factory(factory), m_node(node)
     {}
 
@@ -70,6 +73,16 @@ public:
     {
         assert(m_factory == other.m_factory);
         return other.m_node == m_node;
+    }
+
+    iterator begin() const
+    {
+        return iterator(m_factory, m_node);
+    }
+
+    iterator end() const
+    {
+        return iterator(m_factory);
     }
 };
 

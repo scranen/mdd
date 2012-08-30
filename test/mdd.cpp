@@ -2,6 +2,28 @@
 
 #include <gtest/gtest.h>
 #include <mdd.h>
+#include <algorithm>
+
+namespace std
+{
+    template<typename value_type>
+    void PrintTo(const vector<value_type>& vec, ostream* os) {
+        *os << "[";
+        for (auto element: vec)
+        {
+            *os << element << " ";
+        }
+        *os << "]";
+    }
+
+    template<typename value_type>
+    void PrintTo(const mdd::mdd<value_type>& m, ostream* os) {
+        for (auto vec: m)
+        {
+            *os << ::testing::PrintToString(vec) << "; ";
+        }
+    }
+}
 
 class MDDTest : public testing::Test {
 protected:
@@ -18,7 +40,6 @@ protected:
         floatvec2.push_back(3.0);
     }
 
-    mdd::mdd_factory<std::string> strfactory;
     std::vector<std::string> strvec1;
     std::vector<std::string> strvec2;
     std::vector<std::string> strvec3;
@@ -29,6 +50,7 @@ protected:
 
 TEST_F(MDDTest, CreateStringMDD)
 {
+    mdd::mdd_factory<std::string> strfactory;
     EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
     {
         mdd::mdd<std::string> m = strfactory.empty();
@@ -37,22 +59,16 @@ TEST_F(MDDTest, CreateStringMDD)
         m = m + strvec3; // [b, c]
         m = m + strvec3; // [b, c]
 
-        /*
-        std::list<std::vector<int> > contents;
-        mdd.dump(contents);
-
-        EXPECT_EQ(3, contents.size());
-
-        auto result = std::find(contents.begin(), contents.end(), intvec1);
-        EXPECT_NE(contents.end(), result);
-        result = std::find(contents.begin(), contents.end(), intvec2);
-        EXPECT_NE(contents.end(), result);
-        result = std::find(contents.begin(), contents.end(), intvec3);
-        EXPECT_NE(contents.end(), result);
+        auto result = std::find(m.begin(), m.end(), strvec1);
+        EXPECT_NE(m.end(), result);
+        result = std::find(m.begin(), m.end(), strvec2);
+        EXPECT_NE(m.end(), result);
+        result = std::find(m.begin(), m.end(), strvec3);
+        EXPECT_NE(m.end(), result);
 
         if (HasFailure())
-             ADD_FAILURE() << "contents was:\n" << ::testing::PrintToString(contents);
-        */
+             ADD_FAILURE() << "contents was:\n" << ::testing::PrintToString(m);
+
         strfactory.clean();
         EXPECT_EQ(4, strfactory.size()) << strfactory.print_nodes();
     }
@@ -62,6 +78,7 @@ TEST_F(MDDTest, CreateStringMDD)
 
 TEST_F(MDDTest, SetUnion)
 {
+    mdd::mdd_factory<std::string> strfactory;
     EXPECT_EQ(0, strfactory.size());
     {
         mdd::mdd<std::string> m1 = strfactory.empty(),
@@ -77,13 +94,13 @@ TEST_F(MDDTest, SetUnion)
 
         EXPECT_EQ(m1, m2) << strfactory.print_nodes(m1, m2);
 
-        size_t hits = strfactory.cache_hits(),
-               misses = strfactory.cache_misses();
-
         m1 = strfactory.empty();
         m1 = m1 + strvec1; // [a]
         m2 = strfactory.empty();
         m2 = m2 + strvec2; // [a, b]
+
+        size_t hits = strfactory.cache_hits(),
+               misses = strfactory.cache_misses();
 
         m1 | m2; // Seen before: cache hit
         m2 | m1; // Seen before in different order: cache hit
@@ -91,8 +108,12 @@ TEST_F(MDDTest, SetUnion)
         m2 | strfactory.empty(); // Union with empty set: trivial case
         strfactory.empty() | m2; // Union with empty set: trivial case
 
-        EXPECT_EQ(hits + 2, strfactory.cache_hits());
-        EXPECT_EQ(misses, strfactory.cache_misses());
+        EXPECT_EQ(hits + 2, strfactory.cache_hits()) << "m1: " << ::testing::PrintToString(m1)
+                                                     << "\nm2: " << ::testing::PrintToString(m2)
+                                                     << "\n" << strfactory.print_nodes(m1, m2);
+        EXPECT_EQ(misses, strfactory.cache_misses()) << "m1: " << ::testing::PrintToString(m1)
+                                                     << "\nm2: " << ::testing::PrintToString(m2)
+                                                     << "\n" << strfactory.print_nodes(m1, m2);
     }
     strfactory.clean();
     EXPECT_EQ(0, strfactory.size());

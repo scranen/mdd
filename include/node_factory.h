@@ -24,17 +24,21 @@ class node_factory
 public:
     friend class mdd_iterator<Value>;
 
+    struct mdd_add_element;
+    struct mdd_set_union;
+    struct mdd_set_intersect;
+
     typedef Value value_type;
     typedef const value_type& const_reference;
     typedef node<value_type> node_type;
     typedef const node_type* node_ptr;
     typedef cacherecord<node_type> cacherecord_type;
-    typedef node_cache<node_type> cachemap;
+    typedef node_cache<node_type> cache_type;
     typedef typename std::unordered_set<node_ptr, typename node_type::hash, typename node_type::equal> hashtable;
     typedef typename hashtable::size_type size_type;
 private:
     hashtable m_nodes;
-    cachemap m_cache;
+    cache_type m_cache;
     node_type m_sentinels[2];
 protected:
 
@@ -82,72 +86,8 @@ protected:
     }
 
     /*************************************************************************************************
-     * Operations used for optimisation
-     *************************************************************************************************/
-
-    inline
-    void order(node_ptr& a, node_ptr& b) const
-    {
-        if (b < a)
-        {
-            node_ptr tmp = a;
-            a = b;
-            b = tmp;
-        }
-    }
-
-    /*************************************************************************************************
      * Operations on sets
      *************************************************************************************************/
-
-    /**
-     * @brief Computes the union of two sets.
-     * @param a An MDD.
-     * @param b An MDD.
-     * @return The set union of a and b.
-     */
-    node_ptr set_union(node_ptr a, node_ptr b)
-    {
-        node_ptr result;
-        order(a, b);
-
-        if (a == b || b == empty())
-            return a->use();
-        if (a == empty())
-            return b->use();
-        if (a == emptylist())
-            return add_emptylist(b);
-        if (b == emptylist())
-            return add_emptylist(a);
-
-        if (m_cache.lookup(cache_set_union, a, b, result))
-            return result->use();
-
-        if (a->value < b->value)
-        {
-            node_ptr temp = set_union(a->right, b);
-            result = create(a->value, temp, a->down);
-            temp->unuse();
-        }
-        else
-        if (a->value == b->value)
-        {
-            node_ptr temp1 = set_union(a->right, b->right),
-                     temp2 = set_union(a->down, b->down);
-            result = create(a->value, temp1, temp2);
-            temp1->unuse();
-            temp2->unuse();
-        }
-        else
-        {
-            node_ptr temp = set_union(a, b->right);
-            result = create(b->value, temp, b->down);
-            temp->unuse();
-        }
-
-        m_cache.store(cache_set_union, a, b, result);
-        return result;
-    }
 
     /**
      * @brief Shortcut for adding an empty list to MDD a. This method simply calls add(a, b, e)

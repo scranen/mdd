@@ -95,6 +95,19 @@ struct node
     {}
 };
 
+template<typename Value>
+inline
+void order(const node<Value>*& a, const node<Value>*& b)
+{
+    if (b < a)
+    {
+        const node<Value>* tmp = a;
+        a = b;
+        b = tmp;
+    }
+}
+
+
 } // namespace mdd
 
 #endif // __scranen_mdd_node_h

@@ -1,7 +1,9 @@
 #ifndef __scranen_mdd_mdd_factory_h
 #define __scranen_mdd_mdd_factory_h
 
-#include <node_factory.h>
+#include "node_factory.h"
+#include "operations/set_union.h"
+#include "operations/add_element.h"
 
 namespace mdd
 {
@@ -19,6 +21,10 @@ public:
     typedef mdd<Value> mdd_type;
     typedef const node<Value>* node_ptr;
 
+    /**
+     * @brief Returns an empty MDD.
+     * @return An mdd::mdd representing the empty set.
+     */
     mdd_type empty() { return mdd_type(this, parent::empty()); }
 
     // For debugging purposes:

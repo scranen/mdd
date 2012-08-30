@@ -1,9 +1,11 @@
 #ifndef __scranen_mdd_factory_h
 #define __scranen_mdd_factory_h
 
-#include <stdint.h>
 #include <unordered_set>
 #include <unordered_map>
+
+#include "node.h"
+#include "node_cache.h"
 
 #ifdef DEBUG_MDD_NODES
 #include <iostream>
@@ -12,100 +14,6 @@
 
 namespace mdd
 {
-
-template <typename Value, typename Hash=std::hash<Value> >
-struct node
-{
-    typedef node<Value> node_type;
-    typedef const node_type* node_ptr;
-
-    struct equal
-    {
-        bool operator()(const node_ptr& a, const node_ptr& b) const
-        {
-            return (a->value == b->value && a->right == b->right && a->down == b->down);
-        }
-    };
-
-    struct hash
-    {
-        long operator()(const node_ptr& r) const
-        {
-            uintptr_t a = Hash()(r->value),
-                      b = (uintptr_t)r->right,
-                      c = (uintptr_t)r->down;
-            a -= b; a -= c; a ^= (c>>13);
-            b -= c; b -= a; b ^= (a<<8);
-            c -= a; c -= b; c ^= (b>>13);
-            a -= b; a -= c; a ^= (c>>12);
-            b -= c; b -= a; b ^= (a<<16);
-            c -= a; c -= b; c ^= (b>>5);
-            a -= b; a -= c; a ^= (c>>3);
-            b -= c; b -= a; b ^= (a<<10);
-            c -= a; c -= b; c ^= (b>>15);
-            return c;
-        }
-    };
-
-    mutable Value value;
-    mutable node_ptr right;
-    mutable node_ptr down;
-    mutable uintptr_t usecount;
-    node(const Value& value, node_ptr right, node_ptr down, uintptr_t usecount)
-        : value(value), right(right), down(down), usecount(usecount)
-    {}
-};
-
-template <typename Node>
-struct cacherecord
-{
-    enum operation
-    {
-        set_union,
-        set_intersection,
-        num_operations
-    };
-
-    typedef const Node* node_ptr;
-    typedef cacherecord<Node> record_type;
-    operation m_operation;
-    node_ptr m_arg1;
-    node_ptr m_arg2;
-
-    struct equal
-    {
-        bool operator()(const record_type& a, const record_type& b) const
-        {
-            return (a.m_operation == b.m_operation && a.m_arg1 == b.m_arg1 && a.m_arg2 == b.m_arg2);
-        }
-    };
-
-    struct hash
-    {
-        long operator()(const record_type& r) const
-        {
-            uintptr_t a = r.m_operation,
-                      b = reinterpret_cast<uintptr_t>(r.m_arg1),
-                      c = reinterpret_cast<uintptr_t>(r.m_arg2);
-            a -= b; a -= c; a ^= (c>>13);
-            b -= c; b -= a; b ^= (a<<8);
-            c -= a; c -= b; c ^= (b>>13);
-            a -= b; a -= c; a ^= (c>>12);
-            b -= c; b -= a; b ^= (a<<16);
-            c -= a; c -= b; c ^= (b>>5);
-            a -= b; a -= c; a ^= (c>>3);
-            b -= c; b -= a; b ^= (a<<10);
-            c -= a; c -= b; c ^= (b>>15);
-            return c;
-        }
-    };
-
-    cacherecord(operation op, node_ptr arg1, node_ptr arg2)
-        : m_operation(op), m_arg1(arg1), m_arg2(arg2)
-    {
-
-    }
-};
 
 template <typename Value>
 class mdd_iterator;
@@ -121,63 +29,23 @@ public:
     typedef node<value_type> node_type;
     typedef const node_type* node_ptr;
     typedef cacherecord<node_type> cacherecord_type;
-    typedef typename std::unordered_map<cacherecord_type, node_ptr, typename cacherecord_type::hash, typename cacherecord_type::equal> cachemap;
+    typedef node_cache<node_type> cachemap;
     typedef typename std::unordered_set<node_ptr, typename node_type::hash, typename node_type::equal> hashtable;
     typedef typename hashtable::size_type size_type;
 private:
     hashtable m_nodes;
     cachemap m_cache;
-
-    size_type m_cache_misses;
-    size_type m_cache_hits;
-    size_type m_cache_stores;
+    node_type m_sentinels[2];
 protected:
 
     /*************************************************************************************************
      * Memory management operations and node creation.
      *************************************************************************************************/
 
-    static node_ptr empty() { return static_cast<node_ptr>(0); }
-    static node_ptr emptylist() { return reinterpret_cast<node_ptr>(1); }
-    static bool is_sentinel(node_ptr a) { return reinterpret_cast<uintptr_t>(a) < 2; }
+    node_ptr empty() { return &m_sentinels[0]; }
+    node_ptr emptylist() { return &m_sentinels[1]; }
 
-    node_ptr use(node_ptr node)
-    {
-        if (!is_sentinel(node))
-        {
-            //assert(node->usecount > 0);
-            if (++node->usecount == 1)
-            {
-                use(node->right);
-                use(node->down);
-            }
-#ifdef DEBUG_MDD_NODES
-            std::cout << "Reused " << node << "(" << node->value << ", "
-                      << node->right << ", " << node->down << ")@"
-                      << node->usecount << std::endl;
-#endif
-        }
-        return node;
-    }
-    void unuse(node_ptr node)
-    {
-        if (!is_sentinel(node))
-        {
-            assert(node->usecount > 0);
-            if (--node->usecount == 0)
-            {
-                unuse(node->down);
-                unuse(node->right);
-            }
-#ifdef DEBUG_MDD_NODES
-            std::cout << "Deleted " << node << "(" << node->value << ", "
-                      << node->right << ", " << node->down << ")@"
-                      << node->usecount << std::endl;
-#endif
-        }
-    }
-
-    node_ptr create(const_reference val, node_ptr right=empty(), node_ptr down=emptylist())
+    node_ptr create(const_reference val, node_ptr right, node_ptr down)
     {
         node_ptr newnode = new node_type(val, right, down, 1);
         auto result = m_nodes.insert(newnode);
@@ -187,9 +55,8 @@ protected:
             newnode = *result.first;
             if (newnode->usecount == 0)
             {
-                newnode->value = val;
-                newnode->right = use(right);
-                newnode->down = use(down);
+                right->use();
+                down->use();
                 newnode->usecount = 1;
 #ifdef DEBUG_MDD_NODES
         std::cout << "Undeleted " << newnode << "(" << newnode->value << ", "
@@ -198,12 +65,12 @@ protected:
 #endif
             }
             else
-                newnode = use(newnode);
+                newnode->use();
         }
         else
         {
-            use(right);
-            use(down);
+            right->use();
+            down->use();
 #ifdef DEBUG_MDD_NODES
         std::cout << "Created " << newnode << "(" << newnode->value << ", "
                   << newnode->right << ", " << newnode->down << ")@"
@@ -215,33 +82,8 @@ protected:
     }
 
     /*************************************************************************************************
-     * Operations used for caching and optimisation
+     * Operations used for optimisation
      *************************************************************************************************/
-
-    inline
-    bool cache_lookup(typename cacherecord_type::operation op, node_ptr a, node_ptr b, node_ptr& result)
-    {
-        auto it = m_cache.find(cacherecord_type(op, a, b));
-        if (it != m_cache.end())
-        {
-            ++m_cache_hits;
-            result = it->second;
-            return true;
-        }
-        ++m_cache_misses;
-        return false;
-    }
-
-    inline
-    void cache_store(typename cacherecord_type::operation op, node_ptr a, node_ptr b, node_ptr result)
-    {
-        ++m_cache_stores;
-#ifndef NDEBUG
-        auto it =
-#endif
-        m_cache.insert(std::make_pair(cacherecord_type(op, a, b), result));
-        assert(it.second);
-    }
 
     inline
     void order(node_ptr& a, node_ptr& b) const
@@ -270,22 +112,22 @@ protected:
         order(a, b);
 
         if (a == b || b == empty())
-            return use(a);
+            return a->use();
         if (a == empty())
-            return use(b);
+            return b->use();
         if (a == emptylist())
             return add_emptylist(b);
         if (b == emptylist())
             return add_emptylist(a);
 
-        if (cache_lookup(cacherecord_type::set_union, a, b, result))
-            return use(result);
+        if (m_cache.lookup(cache_set_union, a, b, result))
+            return result->use();
 
         if (a->value < b->value)
         {
             node_ptr temp = set_union(a->right, b);
             result = create(a->value, temp, a->down);
-            unuse(temp);
+            temp->unuse();
         }
         else
         if (a->value == b->value)
@@ -293,17 +135,17 @@ protected:
             node_ptr temp1 = set_union(a->right, b->right),
                      temp2 = set_union(a->down, b->down);
             result = create(a->value, temp1, temp2);
-            unuse(temp1);
-            unuse(temp2);
+            temp1->unuse();
+            temp2->unuse();
         }
         else
         {
             node_ptr temp = set_union(a, b->right);
             result = create(b->value, temp, b->down);
-            unuse(temp);
+            temp->unuse();
         }
 
-        cache_store(cacherecord_type::set_union, a, b, result);
+        m_cache.store(cache_set_union, a, b, result);
         return result;
     }
 
@@ -333,13 +175,13 @@ protected:
         node_ptr temp;
         if (begin == end)
         {
-            if (is_sentinel(a))
+            if (a->sentinel())
                 return emptylist();
             temp = add(a->right, begin, end);
             result = create(a->value, temp, a->down);
         }
         else
-        if (is_sentinel(a) || a->value > *begin)
+        if (a->sentinel() || a->value > *begin)
         {
           temp = add(empty(), begin + 1, end);
           result = create(*begin, a, temp);
@@ -358,7 +200,7 @@ protected:
                 result = create(a->value, temp, a->down);
             }
         }
-        unuse(temp);
+        temp->unuse();
         return result;
     }
 
@@ -367,7 +209,6 @@ public:
      * @brief Constructor.
      */
     node_factory()
-        : m_cache_hits(0), m_cache_misses(0)
     {}
 
     /**
@@ -395,13 +236,22 @@ public:
     }
 
     /**
+     * @brief Clears the cache. This does not remove any nodes from the storage; to free
+     *        memory after a cache clear, use clean().
+     */
+    void clear_cache()
+    {
+        m_cache.clear();
+    }
+
+    /**
      * @brief Returns the total number of cache hits since the factory was created. Together
      *        with cache_misses(), this provides information about the amount of non-trivial
      *        MDD operations requested from this object.
      */
     size_type cache_hits() const
     {
-        return m_cache_hits;
+        return m_cache.hits();
     }
 
     /**
@@ -411,7 +261,7 @@ public:
      */
     size_type cache_misses() const
     {
-        return m_cache_misses;
+        return m_cache.misses();
     }
 
     // For debugging purposes
@@ -421,7 +271,7 @@ public:
      * @param hint1 If given (and not equal to empty()), this pointer is labelled "*"
      * @param hint2 If given (and not equal to empty()), this pointer is labelled "+"
      */
-    void print_nodes(std::ostream& s, node_ptr hint1 = empty(), node_ptr hint2 = empty())
+    void print_nodes(std::ostream& s, node_ptr hint1 = nullptr, node_ptr hint2 = nullptr)
     {
         std::unordered_map<node_ptr, uintptr_t> nummap;
         uintptr_t last = 1;
@@ -431,9 +281,9 @@ public:
             uintptr_t& num = nummap[node];
             if (num == 0) num = last++;
             uintptr_t& numr = nummap[node->right];
-            if (!is_sentinel(node->right) && numr == 0) numr = last++;
+            if (!node->right->sentinel() && numr == 0) numr = last++;
             uintptr_t& numd = nummap[node->down];
-            if (!is_sentinel(node->down) && numd == 0) numd = last++;
+            if (!node->down->sentinel() && numd == 0) numd = last++;
 
             s << num;
             if (node == hint1)

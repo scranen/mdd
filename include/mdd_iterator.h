@@ -3,8 +3,9 @@
 
 #include <stack>
 #include <stdexcept>
-#include <factory.h>
 #include <iterator>
+
+#include "node_factory.h"
 
 namespace mdd
 {
@@ -70,7 +71,7 @@ private:
         bool done = m_stack.empty();
         while (!done)
         {
-            if (m_factory->is_sentinel(m_stack.top()))
+            if (m_stack.top()->sentinel())
             {
                 if (m_stack.top() == m_factory->empty())
                 {
@@ -116,6 +117,6 @@ private:
     factory_ptr m_factory;
 };
 
-}
+} // namespace mdd
 
 #endif // __scranen_mdd_iterator_h

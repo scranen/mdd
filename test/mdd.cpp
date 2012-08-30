@@ -115,6 +115,7 @@ TEST_F(MDDTest, SetUnion)
                                                      << "\nm2: " << ::testing::PrintToString(m2)
                                                      << "\n" << strfactory.print_nodes(m1, m2);
     }
+    strfactory.clear_cache();
     strfactory.clean();
     EXPECT_EQ(0, strfactory.size());
 }

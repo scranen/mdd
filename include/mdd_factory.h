@@ -14,6 +14,8 @@ template <typename Value>
 class mdd;
 template <typename Value>
 class mdd_irel;
+template <typename Value>
+class mdd_srel;
 
 template <typename Value>
 class mdd_factory : public node_factory<Value>
@@ -22,16 +24,24 @@ public:
     typedef node_factory<Value> parent;
     typedef mdd<Value> set_type;
     typedef mdd_irel<Value> irel_type;
+    typedef mdd_srel<Value> srel_type;
     typedef const node<Value>* node_ptr;
 
     friend class mdd<Value>;
     friend class mdd_irel<Value>;
+    friend class mdd_srel<Value>;
 
     /**
      * @brief Returns an empty MDD.
      * @return An mdd::mdd representing the empty set.
      */
     irel_type empty_irel() { return irel_type(this, parent::empty()); }
+
+    /**
+     * @brief Returns an empty MDD.
+     * @return An mdd::mdd representing the empty set.
+     */
+    srel_type empty_srel() { return srel_type(this, parent::empty()); }
 
     /**
      * @brief Returns an empty MDD.

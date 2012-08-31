@@ -6,23 +6,12 @@
 
 namespace std
 {
-    template<typename value_type>
-    void PrintTo(const vector<value_type>& vec, ostream* os) {
-        *os << "[";
-        for (auto element: vec)
-        {
-            *os << element << " ";
-        }
-        *os << "]";
-    }
-
-    template<typename value_type>
-    void PrintTo(const mdd::mdd<value_type>& m, ostream* os) {
-        for (auto vec: m)
-        {
-            *os << ::testing::PrintToString(vec) << "; ";
-        }
-    }
+void PrintTo(const std::vector<char>& vec, std::ostream* os) {
+    *os << "[";
+    for (auto c: vec)
+        *os << c << " ";
+    *os << "]";
+}
 }
 
 class MDDTest : public testing::Test {
@@ -171,10 +160,18 @@ TEST_F(MDDTest, RelComposition)
     char r2[2 * N] = { 'a', 'd', 'a', 'd' };
     char r3[2 * N] = { 'b', 'e', 'b', 'e' };
     char c1[2 * N] = { 'a', 'e', 'a', 'e' };
+    char s1[N + 1] = { 'e', 'e', '1' };
+    char s2[N + 1] = { 'f', 'f', '2' };
+    char sc1[N + 1] = { 'a', 'a', '1' };
+    char sc2[N + 1] = { 'b', 'b', '1' };
+    char sc3[N + 1] = { 'c', 'c', '1' };
+
     EXPECT_EQ(0, factory.size());
     {
         mdd::mdd_irel<char> rel = factory.empty_irel(),
                             result = factory.empty_irel();
+        mdd::mdd_srel<char> seq = factory.empty_srel(),
+                            sresult = factory.empty_srel();
 
         rel.add_in_place(v1, v1 + 2 * N);
         rel.add_in_place(v2, v2 + 2 * N);
@@ -191,6 +188,17 @@ TEST_F(MDDTest, RelComposition)
         result.add_in_place(c1, c1 + 2 * N);
 
         EXPECT_EQ(result, rel.closure());
+
+        seq.add_in_place(s1, s1 + N + 1);
+        seq.add_in_place(s2, s2 + N + 1);
+
+        seq = result.compose(seq);
+
+        sresult.add_in_place(sc1, sc1 + N + 1);
+        sresult.add_in_place(sc2, sc2 + N + 1);
+        sresult.add_in_place(sc3, sc3 + N + 1);
+
+        EXPECT_EQ(sresult, seq);
     }
     factory.clear_cache();
     factory.clean();

@@ -26,67 +26,118 @@ struct node_factory<Value>::mdd_rel_composition
         : m_factory(factory)
     { }
 
-    node_ptr collect_i_i(node_ptr left, node_ptr right)
-    {
-        if (right->sentinel())
-            return right;
-        return m_factory.create(right->value, collect_i_i(left, right->right), apply_i_i(left, right->down));
-    }
-
-    node_ptr match_i_i(node_ptr left, node_ptr right)
-    {
-        if (left->sentinel() || right->sentinel())
-            return m_factory.empty();
-        if (left->value < right->value)
-            return match_i_i(left->right, right);
-        if (left->value > right->value)
-            return match_i_i(left, right->right);
-
-        node_ptr tmp1 = match_i_i(left->right, right->right);
-        node_ptr tmp2 = collect_i_i(left->down, right->down);
-        node_ptr result = factory_type::mdd_set_union(m_factory)(tmp1, tmp2);
-        tmp1->unuse();
-        tmp2->unuse();
-        return result;
-    }
-
-    // Compose interleaved relation with interleaved relation
-    node_ptr apply_i_i(node_ptr left, node_ptr right)
-    {
-        node_ptr result;
-        order(left, right);
-
-        if (left->sentinel())
-            return left;
-
-        assert(right != m_factory.emptylist());
-
-        if (m_factory.m_cache.lookup(cache_rel_composition, left, right, result))
-            return result->use();
-
-        node_ptr r_right = apply_i_i(left->right, right);
-        node_ptr r_down = match_i_i(left->down, right);
-        if (r_down != m_factory.empty())
-        {
-            result = m_factory.create(left->value, r_right, r_down);
-        }
-        else
-            result = r_right;
-
-        m_factory.m_cache.store(cache_rel_composition, left, right, result);
-        return result;
-    }
-
     // Compose interleaved relation with non-interleaved relation
     node_ptr operator()(node_ptr a, node_ptr b, composition_type t)
     {
         switch (t)
         {
         case interleaved_interleaved:
-            return apply_i_i(a, b);
+            return compose_i_i(a, b);
+        case interleaved_sequential:
+            return compose_i_s(a, b);
         default:
             assert(false);
         }
+    }
+private:
+    //
+    // Implementation of interleaved-interleaved composition
+    //
+
+    node_ptr collect_i_i(node_ptr a, node_ptr b)
+    {
+        if (b->sentinel())
+            return b;
+        return m_factory.create(b->value, collect_i_i(a, b->right), compose_i_i(a, b->down));
+    }
+
+    node_ptr match_i_i(node_ptr a, node_ptr b)
+    {
+        if (a->sentinel() || b->sentinel())
+            return m_factory.empty();
+        if (a->value < b->value)
+            return match_i_i(a->right, b);
+        if (a->value > b->value)
+            return match_i_i(a, b->right);
+
+        node_ptr tmp1 = match_i_i(a->right, b->right);
+        node_ptr tmp2 = collect_i_i(a->down, b->down);
+        node_ptr result = factory_type::mdd_set_union(m_factory)(tmp1, tmp2);
+        tmp1->unuse();
+        tmp2->unuse();
+        return result;
+    }
+
+    node_ptr compose_i_i(node_ptr a, node_ptr b)
+    {
+        node_ptr result;
+        order(a, b);
+
+        if (a->sentinel())
+            return a;
+
+        assert(b != m_factory.emptylist());
+
+        if (m_factory.m_cache.lookup(cache_rel_composition_i_i, a, b, result))
+            return result->use();
+
+        node_ptr r_right = compose_i_i(a->right, b);
+        node_ptr r_down = match_i_i(a->down, b);
+        if (r_down != m_factory.empty())
+        {
+            result = m_factory.create(a->value, r_right, r_down);
+        }
+        else
+            result = r_right;
+
+        m_factory.m_cache.store(cache_rel_composition_i_i, a, b, result);
+        return result;
+    }
+
+    //
+    // Implementation of interleaved-sequential composition
+    //
+    node_ptr match_i_s(node_ptr a, node_ptr b)
+    {
+        if (a == m_factory.emptylist())
+            return b;
+        if (a == m_factory.empty())
+            return a;
+        if (b == m_factory.empty())
+            return b;
+        if (a->value < b->value)
+            return match_i_s(a->right, b);
+        if (a->value > b->value)
+            return match_i_s(a, b->right);
+
+        return compose_i_s(a->down, b->down);
+    }
+
+    node_ptr compose_i_s(node_ptr a, node_ptr b)
+    {
+        node_ptr result;
+
+        if (a == m_factory.empty())
+            return a;
+        if (a == m_factory.emptylist())
+            return b->use();
+
+        assert(b != m_factory.emptylist());
+
+        if (m_factory.m_cache.lookup(cache_rel_composition_i_s, a, b, result))
+            return result->use();
+
+        node_ptr r_right = compose_i_s(a->right, b);
+        node_ptr r_down = match_i_s(a->down, b);
+        if (r_down != m_factory.empty())
+        {
+            result = m_factory.create(a->value, r_right, r_down);
+        }
+        else
+            result = r_right;
+
+        m_factory.m_cache.store(cache_rel_composition_i_s, a, b, result);
+        return result;
     }
 };
 

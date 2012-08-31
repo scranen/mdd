@@ -74,6 +74,16 @@ protected:
         : m_factory(factory), m_node(node)
     {}
 
+    factory_ptr get_factory(const mdd_type& other)
+    {
+        return other.m_factory;
+    }
+
+    node_ptr get_node(const mdd_type& other)
+    {
+        return other.m_node;
+    }
+
 public:
     template<typename Functor, typename... Args>
     inline
@@ -223,12 +233,6 @@ public:
     typedef typename parent::factory_ptr factory_ptr;
     typedef typename parent::node_ptr node_ptr;
 
-    /*
-    mdd_irel(const mdd_type& other)
-        : parent(other)
-    { }
-    */
-
     /**
      * @brief Assignment
      * @param other The mdd to copy.
@@ -271,6 +275,17 @@ public:
     }
 
     /**
+     * @brief Compute the relation composition of this relation and \p other.
+     * @param other The other interleaved relation.
+     * @return An MDD that is the composition of this relation and \p other.
+     */
+    mdd_srel<Value> compose(const mdd_srel<Value>& other)
+    {
+        assert(parent::m_factory == parent::get_factory(other));
+        return mdd_srel<Value>(parent::m_factory, typename factory_type::mdd_rel_composition(*parent::m_factory)(parent::m_node, parent::get_node(other), factory_type::mdd_rel_composition::interleaved_sequential));
+    }
+
+    /**
      * @brief Compute the transitive closure of this relation.
      * @return An MDD that is the transitive closure of this relation.
      */
@@ -302,8 +317,80 @@ public:
     mdd_type& operator|=(const mdd_type& other)
     { return apply_in_place<typename factory_type::mdd_set_union>(other.m_node); }
 
-protected:
+    /**
+     * @brief Constructor.
+     * @warning Do not call directly, use an mdd::mdd_factory to create MDD objects.
+     */
     mdd_irel(factory_ptr factory, node_ptr node)
+        : parent(factory, node)
+    {}
+};
+
+/**
+ * @brief MDD class implementing interleaved relations.
+ */
+template <typename Value>
+class mdd_srel : public mdd<Value>
+{
+public:
+    friend class mdd_factory<Value>;
+
+    typedef mdd<Value> parent;
+    typedef mdd_srel<Value> mdd_type;
+    typedef typename parent::factory_type factory_type;
+    typedef typename parent::factory_ptr factory_ptr;
+    typedef typename parent::node_ptr node_ptr;
+
+    /**
+     * @brief Assignment
+     * @param other The mdd to copy.
+     * @return The updated mdd.
+     */
+    mdd_type& operator=(const mdd_type& other)
+    {
+        assert(parent::m_factory == other.m_factory);
+        parent::m_node->unuse();
+        parent::m_node = other.m_node->use();
+        return *this;
+    }
+
+    template<typename Functor, typename... Args>
+    inline
+    mdd_type apply(Args... args) const
+    {
+        return mdd_type(parent::m_factory, Functor(*parent::m_factory)(parent::m_node, args...));
+    }
+
+    template<typename Functor, typename... Args>
+    inline
+    mdd_type& apply_in_place(Args... args)
+    {
+        node_ptr newnode = Functor(*parent::m_factory)(parent::m_node, args...);
+        parent::m_node->unuse();
+        parent::m_node = newnode;
+        return *this;
+    }
+
+    /**
+     * @brief Relation union.
+     * @param other The mdd to merge with.
+     * @return The union of this mdd and \p other.
+     */
+    mdd_type operator|(const mdd_type& other) const
+    { return apply<typename factory_type::mdd_set_union>(other.m_node); }
+
+    /**
+     * @brief Efficient union-assignment.
+     * @see operator|()
+     */
+    mdd_type& operator|=(const mdd_type& other)
+    { return apply_in_place<typename factory_type::mdd_set_union>(other.m_node); }
+
+    /**
+     * @brief Constructor.
+     * @warning Do not call directly, use an mdd::mdd_factory to create MDD objects.
+     */
+    mdd_srel(factory_ptr factory, node_ptr node)
         : parent(factory, node)
     {}
 };

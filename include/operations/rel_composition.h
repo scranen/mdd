@@ -110,7 +110,12 @@ private:
         if (a->value > b->value)
             return match_i_s(a, b->right);
 
-        return compose_i_s(a->down, b->down);
+        node_ptr tmp1 = match_i_s(a->right, b->right);
+        node_ptr tmp2 = compose_i_s(a->down, b->down);
+        node_ptr result = factory_type::mdd_set_union(m_factory)(tmp1, tmp2);
+        tmp1->unuse();
+        tmp2->unuse();
+        return result;
     }
 
     node_ptr compose_i_s(node_ptr a, node_ptr b)

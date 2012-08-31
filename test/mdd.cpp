@@ -152,19 +152,22 @@ TEST_F(MDDTest, RelComposition)
     typedef mdd::mdd_factory<char> factory_t;
     factory_t factory;
     const int N = 2;
-    char v1[2 * N] = { 'a', 'b', 'a', 'b' };
-    char v2[2 * N] = { 'b', 'c', 'b', 'c' };
-    char v3[2 * N] = { 'b', 'd', 'b', 'd' };
-    char v4[2 * N] = { 'c', 'e', 'c', 'e' };
-    char r1[2 * N] = { 'a', 'c', 'a', 'c' };
-    char r2[2 * N] = { 'a', 'd', 'a', 'd' };
-    char r3[2 * N] = { 'b', 'e', 'b', 'e' };
-    char c1[2 * N] = { 'a', 'e', 'a', 'e' };
-    char s1[N + 1] = { 'e', 'e', '1' };
-    char s2[N + 1] = { 'f', 'f', '2' };
-    char sc1[N + 1] = { 'a', 'a', '1' };
-    char sc2[N + 1] = { 'b', 'b', '1' };
-    char sc3[N + 1] = { 'c', 'c', '1' };
+    char R[4][2 * N] = { { 'a', 'b', 'a', 'b' },
+                         { 'b', 'c', 'b', 'c' },
+                         { 'b', 'd', 'b', 'd' },
+                         { 'c', 'e', 'c', 'e' } };
+    char E[3][2 * N] = { { 'a', 'c', 'a', 'c' },
+                         { 'a', 'd', 'a', 'd' },
+                         { 'b', 'e', 'b', 'e' } };
+    char c[2 * N] = { 'a', 'e', 'a', 'e' };
+    char S[3][N + 1] = { { 'd', 'd', '1' },
+                         { 'e', 'e', '2' },
+                         { 'f', 'f', '3' } };
+    char C[5][N + 1] = { { 'a', 'a', '1' },
+                         { 'a', 'a', '2' },
+                         { 'b', 'b', '1' },
+                         { 'b', 'b', '2' },
+                         { 'c', 'c', '2' } };
 
     EXPECT_EQ(0, factory.size());
     {
@@ -173,30 +176,25 @@ TEST_F(MDDTest, RelComposition)
         mdd::mdd_srel<char> seq = factory.empty_srel(),
                             sresult = factory.empty_srel();
 
-        rel.add_in_place(v1, v1 + 2 * N);
-        rel.add_in_place(v2, v2 + 2 * N);
-        rel.add_in_place(v3, v3 + 2 * N);
-        rel.add_in_place(v4, v4 + 2 * N);
-
-        result.add_in_place(r1, r1 + 2 * N);
-        result.add_in_place(r2, r2 + 2 * N);
-        result.add_in_place(r3, r3 + 2 * N);
+        for (auto v: R)
+            rel.add_in_place(v, v + 2 * N);
+        for (auto v: E)
+            result.add_in_place(v, v + 2 * N);
 
         EXPECT_EQ(result, rel.compose(rel));
 
         result |= rel;
-        result.add_in_place(c1, c1 + 2 * N);
+        result.add_in_place(c, c + 2 * N);
 
         EXPECT_EQ(result, rel.closure());
 
-        seq.add_in_place(s1, s1 + N + 1);
-        seq.add_in_place(s2, s2 + N + 1);
+        for (auto v: S)
+            seq.add_in_place(v, v + N + 1);
 
         seq = result.compose(seq);
 
-        sresult.add_in_place(sc1, sc1 + N + 1);
-        sresult.add_in_place(sc2, sc2 + N + 1);
-        sresult.add_in_place(sc3, sc3 + N + 1);
+        for (auto v: C)
+            sresult.add_in_place(v, v + N + 1);
 
         EXPECT_EQ(sresult, seq);
     }

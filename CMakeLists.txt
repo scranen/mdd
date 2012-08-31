@@ -7,6 +7,7 @@ file(GLOB_RECURSE HEADERS "include" "*.h")
 file(GLOB TEST_SOURCES "test/*.cpp")
 add_custom_target(mdd_headers SOURCES ${HEADERS})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS_ANALYSIS "${CMAKE_CXX_FLAGS} --analyze")
 
 include_directories(
   include

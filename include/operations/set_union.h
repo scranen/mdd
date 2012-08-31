@@ -2,6 +2,7 @@
 #define __scranen_mdd_operations_set_union_h
 
 #include "node_factory.h"
+#include "add_element.h"
 
 namespace mdd
 {
@@ -12,6 +13,7 @@ struct node_factory<Value>::mdd_set_union
     typedef node_factory<Value> factory_type;
     typedef typename factory_type::node_ptr node_ptr;
     typedef typename factory_type::cache_type cache_type;
+    typedef factory_type::mdd_add_element add_element;
 
     factory_type& m_factory;
 
@@ -29,9 +31,9 @@ struct node_factory<Value>::mdd_set_union
         if (a == m_factory.empty())
             return b->use();
         if (a == m_factory.emptylist())
-            return m_factory.add_emptylist(b);
+            return add_element(m_factory)(b);
         if (b == m_factory.emptylist())
-            return m_factory.add_emptylist(a);
+            return add_element(m_factory)(a);
 
         if (m_factory.m_cache.lookup(cache_set_union, a, b, result))
             return result->use();
@@ -39,23 +41,19 @@ struct node_factory<Value>::mdd_set_union
         if (a->value < b->value)
         {
             node_ptr temp = operator()(a->right, b);
-            result = m_factory.create(a->value, temp, a->down);
-            temp->unuse();
+            result = m_factory.create(a->value, temp, a->down->use());
         }
         else
-        if (a->value == b->value)
+        if (a->value > b->value)
+        {
+            node_ptr temp = operator()(a, b->right);
+            result = m_factory.create(b->value, temp, b->down->use());
+        }
+        else
         {
             node_ptr temp1 = operator()(a->right, b->right),
                      temp2 = operator()(a->down, b->down);
             result = m_factory.create(a->value, temp1, temp2);
-            temp1->unuse();
-            temp2->unuse();
-        }
-        else
-        {
-            node_ptr temp = operator()(a, b->right);
-            result = m_factory.create(b->value, temp, b->down);
-            temp->unuse();
         }
 
         m_factory.m_cache.store(cache_set_union, a, b, result);

@@ -5,45 +5,56 @@
 #include "operations/add_element.h"
 #include "operations/set_union.h"
 #include "operations/set_intersect.h"
+#include "operations/rel_composition.h"
 
 namespace mdd
 {
 
 template <typename Value>
 class mdd;
+template <typename Value>
+class mdd_irel;
 
 template <typename Value>
 class mdd_factory : public node_factory<Value>
 {
 public:
-    friend class mdd<Value>;
-
     typedef node_factory<Value> parent;
-    typedef mdd<Value> mdd_type;
+    typedef mdd<Value> set_type;
+    typedef mdd_irel<Value> irel_type;
     typedef const node<Value>* node_ptr;
+
+    friend class mdd<Value>;
+    friend class mdd_irel<Value>;
 
     /**
      * @brief Returns an empty MDD.
      * @return An mdd::mdd representing the empty set.
      */
-    mdd_type empty() { return mdd_type(this, parent::empty()); }
+    irel_type empty_irel() { return irel_type(this, parent::empty()); }
+
+    /**
+     * @brief Returns an empty MDD.
+     * @return An mdd::mdd representing the empty set.
+     */
+    set_type empty_set() { return set_type(this, parent::empty()); }
 
     /**
      * @brief Returns an MDD that only contains the empty list.
      * @return An mdd::mdd containing only the empty list.
      */
-    mdd_type emptylist() { return mdd_type(this, parent::emptylist()); }
+    set_type singleton_set() { return set_type(this, parent::emptylist()); }
 
     // For debugging purposes:
     void print_nodes(std::ostream& s)
     {
         parent::print_nodes(s);
     }
-    void print_nodes(std::ostream& s, const mdd_type& hint1)
+    void print_nodes(std::ostream& s, const set_type& hint1)
     {
         parent::print_nodes(s, hint1.m_node);
     }
-    void print_nodes(std::ostream& s, const mdd_type& hint1, const mdd_type& hint2)
+    void print_nodes(std::ostream& s, const set_type& hint1, const set_type& hint2)
     {
         parent::print_nodes(s, hint1.m_node, hint2.m_node);
     }
@@ -55,14 +66,14 @@ public:
         return s.str();
     }
 
-    std::string print_nodes(const mdd_type& hint1)
+    std::string print_nodes(const set_type& hint1)
     {
         std::stringstream s;
         print_nodes(s, hint1);
         return s.str();
     }
 
-    std::string print_nodes(const mdd_type& hint1, const mdd_type& hint2)
+    std::string print_nodes(const set_type& hint1, const set_type& hint2)
     {
         std::stringstream s;
         print_nodes(s, hint1, hint2);

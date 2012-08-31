@@ -8,7 +8,7 @@ namespace mdd
 {
 
 /**
- * @brief The main MDD class.
+ * @brief Generic MDD class.
  *
  * This class represents a set of vectors of elements of type Value. Instances are
  * created using an mdd::mdd_factory, or by copy-constructing other instances.
@@ -59,14 +59,14 @@ public:
     friend class mdd_factory<Value>;
 
     typedef mdd_iterator<Value> iterator;
-    typedef const mdd_iterator<Value> const_iterator;
+    typedef mdd_iterator<Value> const_iterator;
     typedef Value& reference;
     typedef const Value& const_reference;
     typedef mdd<Value> mdd_type;
     typedef mdd_factory<Value> factory_type;
     typedef factory_type* factory_ptr;
     typedef typename mdd_factory<Value>::node_ptr node_ptr;
-private:
+protected:
     factory_ptr m_factory;
     node_ptr m_node;
 
@@ -74,25 +74,7 @@ private:
         : m_factory(factory), m_node(node)
     {}
 
-    template<typename Functor>
-    inline
-    mdd_type apply(const mdd_type& other) const
-    {
-        assert(m_factory == other.m_factory);
-        return mdd_type(m_factory, Functor(*m_factory)(m_node, other.m_node));
-    }
-
-    template<typename Functor>
-    inline
-    mdd_type& apply_in_place(const mdd_type& other)
-    {
-        assert(m_factory == other.m_factory);
-        node_ptr newnode = Functor(*m_factory)(m_node, other.m_node);
-        m_node->unuse();
-        m_node = newnode;
-        return *this;
-    }
-
+public:
     template<typename Functor, typename... Args>
     inline
     mdd_type apply(Args... args) const
@@ -110,7 +92,6 @@ private:
         return *this;
     }
 
-public:
     ~mdd()
     {
         m_node->unuse();
@@ -145,14 +126,14 @@ public:
      * @return The intersection of this mdd and other.
      */
     mdd_type operator&(const mdd_type& other) const
-    { return apply<typename factory_type::mdd_set_intersect>(other); }
+    { return apply<typename factory_type::mdd_set_intersect>(other.m_node); }
 
     /**
      * @brief Efficient intersection-assignment.
      * @see operator&()
      */
     mdd_type& operator&=(const mdd_type& other) const
-    { return apply_in_place<typename factory_type::mdd_set_intersect>(other); }
+    { return apply_in_place<typename factory_type::mdd_set_intersect>(other.m_node); }
 
     /**
      * @brief Set union.
@@ -160,14 +141,14 @@ public:
      * @return The union of this mdd and \p other.
      */
     mdd_type operator|(const mdd_type& other) const
-    { return apply<typename factory_type::mdd_set_union>(other); }
+    { return apply<typename factory_type::mdd_set_union>(other.m_node); }
 
     /**
      * @brief Efficient union-assignment.
      * @see operator|()
      */
     mdd_type& operator|=(const mdd_type& other) const
-    { return apply_in_place<typename factory_type::mdd_set_union>(other); }
+    { return apply_in_place<typename factory_type::mdd_set_union>(other.m_node); }
 
 
     /**
@@ -219,6 +200,31 @@ m += v;    // efficient
 
     iterator end() const
     { return iterator(m_factory); }
+};
+
+/**
+ * @brief MDD class implementing interleaved relations.
+ */
+template <typename Value>
+class mdd_irel : public mdd<Value>
+{
+public:
+    friend class mdd_factory<Value>;
+
+    typedef mdd<Value> parent;
+    typedef typename parent::mdd_type mdd_type;
+    typedef typename parent::factory_type factory_type;
+    typedef typename parent::factory_ptr factory_ptr;
+    typedef typename parent::node_ptr node_ptr;
+
+    mdd_type compose(const mdd_irel& other)
+    {
+        return parent::template apply<typename factory_type::mdd_rel_composition>(other.m_node, factory_type::mdd_rel_composition::interleaved_interleaved);
+    }
+protected:
+    mdd_irel(factory_ptr factory, node_ptr node)
+        : parent(factory, node)
+    {}
 };
 
 } // namespace mdd

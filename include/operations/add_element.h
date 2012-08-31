@@ -29,30 +29,34 @@ struct node_factory<Value>::mdd_add_element
             if (a->sentinel())
                 return m_factory.emptylist();
             temp = operator()(a->right, begin, end);
-            result = m_factory.create(a->value, temp, a->down);
+            result = m_factory.create(a->value, temp, a->down->use());
         }
         else
         if (a->sentinel() || a->value > *begin)
         {
           temp = operator()(m_factory.empty(), begin + 1, end);
-          result = m_factory.create(*begin, a, temp);
+          result = m_factory.create(*begin, a->use(), temp);
         }
         else
         {
             if (a->value == *begin)
             {
                 temp = operator()(a->down, begin + 1, end);
-                result = m_factory.create(a->value, a->right, temp);
+                result = m_factory.create(a->value, a->right->use(), temp);
             }
             else
             if (a->value < *begin)
             {
                 temp = operator()(a->right, begin, end);
-                result = m_factory.create(a->value, temp, a->down);
+                result = m_factory.create(a->value, temp, a->down->use());
             }
         }
-        temp->unuse();
         return result;
+    }
+
+    node_ptr operator()(node_ptr a)
+    {
+        return operator()(a, static_cast<Value*>(nullptr), static_cast<Value*>(nullptr));
     }
 };
 

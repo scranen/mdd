@@ -51,12 +51,20 @@ struct node
     {
         if (!sentinel())
         {
-            assert(usecount > 0);
             ++usecount;
 #ifdef DEBUG_MDD_NODES
-            std::cout << "Reused " << this << "(" << value << ", "
-                      << right << ", " << down << ")@"
-                      << usecount << std::endl;
+            if (usecount == 1)
+            {
+                std::cout << "Undeleted " << newnode << "(" << newnode->value << ", "
+                          << newnode->right << ", " << newnode->down << ")@"
+                          << newnode->usecount << std::endl;
+            }
+            else
+            {
+                std::cout << "Reused " << this << "(" << value << ", "
+                          << right << ", " << down << ")@"
+                          << usecount << std::endl;
+            }
 #endif
         }
         return this;

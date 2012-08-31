@@ -27,6 +27,7 @@ public:
     struct mdd_add_element;
     struct mdd_set_union;
     struct mdd_set_intersect;
+    struct mdd_rel_composition;
 
     typedef Value value_type;
     typedef const value_type& const_reference;
@@ -49,6 +50,14 @@ protected:
     node_ptr empty() { return &m_sentinels[0]; }
     node_ptr emptylist() { return &m_sentinels[1]; }
 
+    /**
+     * @brief Creates a new node (\p val, \p right, \p down).
+     * @warning Ownership of \p right and \p down is transferred to the newly created node.
+     * @param val The value of the MDD node.
+     * @param right The MDD node that continues this level.
+     * @param down The MDD node that represents the next level.
+     * @return A new MDD node with the specified values.
+     */
     node_ptr create(const_reference val, node_ptr right, node_ptr down)
     {
         node_ptr newnode = new node_type(val, right, down, 1);
@@ -57,91 +66,22 @@ protected:
         {
             delete newnode;
             newnode = *result.first;
-            if (newnode->usecount == 0)
+            if (newnode->usecount != 0)
             {
-                right->use();
-                down->use();
-                newnode->usecount = 1;
-#ifdef DEBUG_MDD_NODES
-        std::cout << "Undeleted " << newnode << "(" << newnode->value << ", "
-                  << newnode->right << ", " << newnode->down << ")@"
-                  << newnode->usecount << std::endl;
-#endif
+                right->unuse();
+                down->unuse();
             }
-            else
-                newnode->use();
+            newnode->use();
         }
+#ifdef DEBUG_MDD_NODES
         else
         {
-            right->use();
-            down->use();
-#ifdef DEBUG_MDD_NODES
         std::cout << "Created " << newnode << "(" << newnode->value << ", "
                   << newnode->right << ", " << newnode->down << ")@"
                   << newnode->usecount << std::endl;
+        }
 #endif
-        }
-
         return newnode;
-    }
-
-    /*************************************************************************************************
-     * Operations on sets
-     *************************************************************************************************/
-
-    /**
-     * @brief Shortcut for adding an empty list to MDD a. This method simply calls add(a, b, e)
-     *        with (b == e).
-     * @param a
-     * @return
-     */
-    inline
-    node_ptr add_emptylist(node_ptr a)
-    {
-        return add(a, static_cast<value_type*>(nullptr), static_cast<value_type*>(nullptr));
-    }
-
-    /**
-     * @brief Adds a list of elements to the MDD.
-     * @param a The MDD to add a vector to.
-     * @param begin The start of the vector (any iterator).
-     * @param end The end of the vector (any iterator comparable to begin).
-     * @return An MDD that represents a with the provided vector added to it.
-     */
-    template <typename iterator>
-    node_ptr add(node_ptr a, iterator begin, iterator end)
-    {
-        node_ptr result;
-        node_ptr temp;
-        if (begin == end)
-        {
-            if (a->sentinel())
-                return emptylist();
-            temp = add(a->right, begin, end);
-            result = create(a->value, temp, a->down);
-        }
-        else
-        if (a->sentinel() || a->value > *begin)
-        {
-          temp = add(empty(), begin + 1, end);
-          result = create(*begin, a, temp);
-        }
-        else
-        {
-            if (a->value == *begin)
-            {
-                temp = add(a->down, begin + 1, end);
-                result = create(a->value, a->right, temp);
-            }
-            else
-            if (a->value < *begin)
-            {
-                temp = add(a->right, begin, end);
-                result = create(a->value, temp, a->down);
-            }
-        }
-        temp->unuse();
-        return result;
     }
 
 public:

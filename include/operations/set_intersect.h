@@ -45,8 +45,6 @@ struct node_factory<Value>::mdd_set_intersect
             if (down != m_factory.empty())
             {
                 result = m_factory.create(a->value, right, down);
-                right->unuse();
-                down->unuse();
             }
             else
             if (right != m_factory.empty())

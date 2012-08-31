@@ -9,7 +9,8 @@ namespace mdd
 enum cache_operation
 {
     cache_set_union,
-    cache_set_intersection
+    cache_set_intersection,
+    cache_rel_composition
 };
 
 template <typename Node>

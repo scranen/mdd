@@ -54,13 +54,13 @@ TEST_F(MDDTest, CreateStringMDD)
     mdd::mdd_factory<std::string> strfactory;
     EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
     {
-        mdd::mdd<std::string> m = strfactory.empty();
+        mdd::mdd<std::string> m = strfactory.empty_set();
         m = m + strvec1; // [a]
         m += strvec2;    // [a, b]
         m = m + strvec3; // [b, c]
         m += strvec3;    // [b, c]
 
-        EXPECT_EQ(strfactory.emptylist(), strfactory.empty() + strvec0);
+        EXPECT_EQ(strfactory.singleton_set(), strfactory.empty_set() + strvec0);
 
         auto result = std::find(m.begin(), m.end(), strvec1);
         EXPECT_NE(m.end(), result);
@@ -84,8 +84,8 @@ TEST_F(MDDTest, SetUnion)
     mdd::mdd_factory<std::string> strfactory;
     EXPECT_EQ(0, strfactory.size());
     {
-        mdd::mdd<std::string> m1 = strfactory.empty(),
-                              m2 = strfactory.empty();
+        mdd::mdd<std::string> m1 = strfactory.empty_set(),
+                              m2 = strfactory.empty_set();
         m1 = m1 + strvec1; // [a]
         m2 = m2 + strvec2; // [a, b]
 
@@ -97,9 +97,9 @@ TEST_F(MDDTest, SetUnion)
 
         EXPECT_EQ(m1, m2) << strfactory.print_nodes(m1, m2);
 
-        m1 = strfactory.empty();
+        m1 = strfactory.empty_set();
         m1 = m1 + strvec1; // [a]
-        m2 = strfactory.empty();
+        m2 = strfactory.empty_set();
         m2 = m2 + strvec2; // [a, b]
 
         size_t hits = strfactory.cache_hits(),
@@ -108,8 +108,8 @@ TEST_F(MDDTest, SetUnion)
         m1 | m2; // Seen before: cache hit
         m2 | m1; // Seen before in different order: cache hit
         m1 | m1; // Union of equal elements: trivial case
-        m2 | strfactory.empty(); // Union with empty set: trivial case
-        strfactory.empty() | m2; // Union with empty set: trivial case
+        m2 | strfactory.empty_set(); // Union with empty set: trivial case
+        strfactory.empty_set() | m2; // Union with empty set: trivial case
 
         EXPECT_EQ(hits + 2, strfactory.cache_hits()) << "m1: " << ::testing::PrintToString(m1)
                                                      << "\nm2: " << ::testing::PrintToString(m2)
@@ -120,7 +120,7 @@ TEST_F(MDDTest, SetUnion)
     }
     strfactory.clear_cache();
     strfactory.clean();
-    EXPECT_EQ(0, strfactory.size());
+    EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
 }
 
 
@@ -129,9 +129,9 @@ TEST_F(MDDTest, SetIntersect)
     mdd::mdd_factory<std::string> strfactory;
     EXPECT_EQ(0, strfactory.size());
     {
-        mdd::mdd<std::string> m1 = strfactory.empty(),
-                              m2 = strfactory.empty(),
-                              el = strfactory.emptylist();
+        mdd::mdd<std::string> m1 = strfactory.empty_set(),
+                              m2 = strfactory.empty_set(),
+                              el = strfactory.singleton_set();
 
         m1 += strvec1; // [a]
         m2 += strvec2; // [a, b]
@@ -143,10 +143,10 @@ TEST_F(MDDTest, SetIntersect)
         m1 += strvec3;
 
         EXPECT_EQ(m2, m1 & m2);
-        EXPECT_EQ(strfactory.empty(), m1 & strfactory.empty());
-        EXPECT_EQ(strfactory.empty(), strfactory.empty() & m2);
-        EXPECT_EQ(strfactory.empty(), el & m2);
-        EXPECT_EQ(strfactory.empty(), m1 & el);
+        EXPECT_EQ(strfactory.empty_set(), m1 & strfactory.empty_set());
+        EXPECT_EQ(strfactory.empty_set(), strfactory.empty_set() & m2);
+        EXPECT_EQ(strfactory.empty_set(), el & m2);
+        EXPECT_EQ(strfactory.empty_set(), m1 & el);
         EXPECT_EQ(el, el & el);
 
         m1 += strvec0;
@@ -157,6 +157,36 @@ TEST_F(MDDTest, SetIntersect)
     strfactory.clean();
     EXPECT_EQ(0, strfactory.size());
 }
+
+TEST_F(MDDTest, RelComposition)
+{
+    typedef mdd::mdd_factory<char> factory_t;
+    factory_t factory;
+    const int N = 2;
+    char v1[2 * N] = { 'a', 'b', 'a', 'b' };
+    char v2[2 * N] = { 'b', 'c', 'b', 'c' };
+    char v3[2 * N] = { 'b', 'd', 'b', 'd' };
+    char r1[2 * N] = { 'a', 'c', 'a', 'c' };
+    char r2[2 * N] = { 'a', 'd', 'a', 'd' };
+    EXPECT_EQ(0, factory.size());
+    {
+        mdd::mdd_irel<char> rel = factory.empty_irel(),
+                            result = factory.empty_irel();
+
+        rel.add_in_place(v1, v1 + 2 * N);
+        rel.add_in_place(v2, v2 + 2 * N);
+        rel.add_in_place(v3, v3 + 2 * N);
+
+        result.add_in_place(r1, r1 + 2 * N);
+        result.add_in_place(r2, r2 + 2 * N);
+
+        EXPECT_EQ(result, rel.compose(rel));
+    }
+    factory.clear_cache();
+    factory.clean();
+    EXPECT_EQ(0, factory.size());
+}
+
 
 int main(int argc, char** argv)
 {

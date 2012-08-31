@@ -132,7 +132,7 @@ public:
      * @brief Efficient intersection-assignment.
      * @see operator&()
      */
-    mdd_type& operator&=(const mdd_type& other) const
+    mdd_type& operator&=(const mdd_type& other)
     { return apply_in_place<typename factory_type::mdd_set_intersect>(other.m_node); }
 
     /**
@@ -147,7 +147,7 @@ public:
      * @brief Efficient union-assignment.
      * @see operator|()
      */
-    mdd_type& operator|=(const mdd_type& other) const
+    mdd_type& operator|=(const mdd_type& other)
     { return apply_in_place<typename factory_type::mdd_set_union>(other.m_node); }
 
 
@@ -195,6 +195,12 @@ m += v;    // efficient
         return other.m_node == m_node;
     }
 
+    bool operator!=(const mdd_type& other) const
+    {
+        assert(m_factory == other.m_factory);
+        return other.m_node != m_node;
+    }
+
     iterator begin() const
     { return iterator(m_factory, m_node); }
 
@@ -212,15 +218,90 @@ public:
     friend class mdd_factory<Value>;
 
     typedef mdd<Value> parent;
-    typedef typename parent::mdd_type mdd_type;
+    typedef mdd_irel<Value> mdd_type;
     typedef typename parent::factory_type factory_type;
     typedef typename parent::factory_ptr factory_ptr;
     typedef typename parent::node_ptr node_ptr;
 
-    mdd_type compose(const mdd_irel& other)
+    /*
+    mdd_irel(const mdd_type& other)
+        : parent(other)
+    { }
+    */
+
+    /**
+     * @brief Assignment
+     * @param other The mdd to copy.
+     * @return The updated mdd.
+     */
+    mdd_type& operator=(const mdd_type& other)
     {
-        return parent::template apply<typename factory_type::mdd_rel_composition>(other.m_node, factory_type::mdd_rel_composition::interleaved_interleaved);
+        assert(parent::m_factory == other.m_factory);
+        parent::m_node->unuse();
+        parent::m_node = other.m_node->use();
+        return *this;
     }
+
+    template<typename Functor, typename... Args>
+    inline
+    mdd_type apply(Args... args) const
+    {
+        return mdd_type(parent::m_factory, Functor(*parent::m_factory)(parent::m_node, args...));
+    }
+
+    template<typename Functor, typename... Args>
+    inline
+    mdd_type& apply_in_place(Args... args)
+    {
+        node_ptr newnode = Functor(*parent::m_factory)(parent::m_node, args...);
+        parent::m_node->unuse();
+        parent::m_node = newnode;
+        return *this;
+    }
+
+    /**
+     * @brief Compute the relation composition of this relation and \p other.
+     * @param other The other interleaved relation.
+     * @return An MDD that is the composition of this relation and \p other.
+     */
+    mdd_type compose(const mdd_type& other)
+    {
+        assert(parent::m_factory == other.m_factory);
+        return apply<typename factory_type::mdd_rel_composition>(other.m_node, factory_type::mdd_rel_composition::interleaved_interleaved);
+    }
+
+    /**
+     * @brief Compute the transitive closure of this relation.
+     * @return An MDD that is the transitive closure of this relation.
+     */
+    mdd_type closure()
+    {
+        mdd_type result(*this);
+        mdd_type old(result);
+        do
+        {
+            old = result;
+            result |= result.compose(result);
+        }
+        while (old != result);
+        return result;
+    }
+
+    /**
+     * @brief Relation union.
+     * @param other The mdd to merge with.
+     * @return The union of this mdd and \p other.
+     */
+    mdd_type operator|(const mdd_type& other) const
+    { return apply<typename factory_type::mdd_set_union>(other.m_node); }
+
+    /**
+     * @brief Efficient union-assignment.
+     * @see operator|()
+     */
+    mdd_type& operator|=(const mdd_type& other)
+    { return apply_in_place<typename factory_type::mdd_set_union>(other.m_node); }
+
 protected:
     mdd_irel(factory_ptr factory, node_ptr node)
         : parent(factory, node)

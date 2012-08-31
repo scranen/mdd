@@ -166,8 +166,11 @@ TEST_F(MDDTest, RelComposition)
     char v1[2 * N] = { 'a', 'b', 'a', 'b' };
     char v2[2 * N] = { 'b', 'c', 'b', 'c' };
     char v3[2 * N] = { 'b', 'd', 'b', 'd' };
+    char v4[2 * N] = { 'c', 'e', 'c', 'e' };
     char r1[2 * N] = { 'a', 'c', 'a', 'c' };
     char r2[2 * N] = { 'a', 'd', 'a', 'd' };
+    char r3[2 * N] = { 'b', 'e', 'b', 'e' };
+    char c1[2 * N] = { 'a', 'e', 'a', 'e' };
     EXPECT_EQ(0, factory.size());
     {
         mdd::mdd_irel<char> rel = factory.empty_irel(),
@@ -176,11 +179,18 @@ TEST_F(MDDTest, RelComposition)
         rel.add_in_place(v1, v1 + 2 * N);
         rel.add_in_place(v2, v2 + 2 * N);
         rel.add_in_place(v3, v3 + 2 * N);
+        rel.add_in_place(v4, v4 + 2 * N);
 
         result.add_in_place(r1, r1 + 2 * N);
         result.add_in_place(r2, r2 + 2 * N);
+        result.add_in_place(r3, r3 + 2 * N);
 
         EXPECT_EQ(result, rel.compose(rel));
+
+        result |= rel;
+        result.add_in_place(c1, c1 + 2 * N);
+
+        EXPECT_EQ(result, rel.closure());
     }
     factory.clear_cache();
     factory.clean();

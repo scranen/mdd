@@ -99,8 +99,8 @@ private:
     //
     node_ptr match_i_s(node_ptr a, node_ptr b)
     {
-        if (a == m_factory.emptylist())
-            return b;
+        assert(b != m_factory.emptylist());
+
         if (a == m_factory.empty())
             return a;
         if (b == m_factory.empty())

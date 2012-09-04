@@ -206,7 +206,8 @@ TEST_F(MDDTest, RelComposition)
 class Relabeler
 {
     mdd::mdd_factory<int>& m_factory;
-    int m_last[1];
+    int m_last;
+    int m_start;
 public:
     Relabeler(mdd::mdd_factory<int>& factory)
         : m_factory(factory)
@@ -220,17 +221,18 @@ public:
     mdd::mdd<int> replace(size_t, const mdd::mdd<int>& m)
     {
         mdd::mdd<int> result = m_factory.empty_set();
-        result.add_in_place(m_last, m_last + 1);
-        m_last[0]  = m_last[0] + 1;
+        result.add_in_place(&m_last, reinterpret_cast<int*>(&m_last) + 1);
+        ++m_last;
         return result;
     }
-    int num()
+    int num() const
     {
-        return m_last[0];
+        return m_last - m_start;
     }
-    void reset()
+    void reset(int n=0)
     {
-        m_last[0] = 0;
+        m_last = n;
+        m_start = n;
     }
 };
 
@@ -266,49 +268,45 @@ TEST_F(MDDTest, Bisimulation)
 {
     typedef mdd::mdd_factory<int> factory_t;
     factory_t factory;
-    int AT[6][4]  = { { 0, 0, /* --> */ 0, 1 },
-                      { 0, 0, /* --> */ 1, 0 },
-                      { 0, 1, /* --> */ 1, 0 },
-                      { 1, 0, /* --> */ 1, 0 },
-                      { 1, 1, /* --> */ 0, 1 },
-                      { 1, 1, /* --> */ 1, 0 } };
+    int AT[6][4]  = { { 0, 0, 0, 1 },   // 00 --> 01
+                      { 0, 1, 0, 0 },   // 00 --> 10
+                      { 0, 1, 1, 0 },   // 01 --> 10
+                      { 1, 1, 0, 0 },   // 10 --> 10
+                      { 1, 0, 1, 1 },   // 11 --> 01
+                      { 1, 1, 1, 0 } }; // 11 --> 10
     int AL[4][3]  = { { 0, 0, 12 },
                       { 0, 1, 13 },
                       { 1, 0, 12 },
                       { 1, 1, 12 } };
-    int AQ[4][3]  = { { 0, 0, 0 },
-                      { 0, 1, 1 },
-                      { 1, 0, 0 },
-                      { 1, 1, 0 } };
 
     EXPECT_EQ(0, factory.size());
     {
         mdd::mdd_srel<int> L = factory.empty_srel();
         mdd::mdd_srel<int> P = factory.empty_srel();
+        mdd::mdd_srel<int> P0 = factory.empty_srel();
         mdd::mdd_srel<int> sig = factory.empty_srel();
         mdd::mdd_irel<int> T = factory.empty_irel();
-        int oldn;
+        int oldn, n0;
         for (auto v: AL)
             L.add_in_place(v, v + 3);
         for (auto v: AT)
             T.add_in_place(v, v + 4);
         Relabeler l(factory);
 
-        P = L.relabel(l);
-        oldn = 0;
+        P0 = L.relabel(l);
+        n0 = l.num();
+        l.reset(n0);
+        P = P0.relabel(l);
+        oldn = 1;
         while (l.num() != oldn)
         {
-            l.reset();
             oldn = l.num();
-            sig = T.compose(P) | P;
+            sig = T.compose(P) | P0;
+            l.reset(n0);
             P = sig.relabel(l);
         }
 
-        mdd::mdd_irel<int> Q = factory.empty_irel();
-        for (auto v: AQ)
-            Q.add_in_place(v, v + 3);
-
-        EXPECT_EQ(Q, P);
+        EXPECT_EQ(P(0)(0), P(1)(1));
     }
     factory.clear_cache();
     factory.clean();

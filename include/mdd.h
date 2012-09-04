@@ -218,6 +218,18 @@ m += v;    // efficient
 
     iterator end() const
     { return iterator(m_factory); }
+
+    mdd_type operator()(const Value& v)
+    {
+        node_ptr p = m_node;
+        while (!p->sentinel())
+        {
+            if (p->value == v)
+                return mdd_type(m_factory, p->down->use());
+            p = p->right;
+        }
+        throw std::runtime_error("Key not found.");
+    }
 };
 
 /**
@@ -389,9 +401,9 @@ public:
     { return apply_in_place<typename factory_type::mdd_set_union>(other.m_node); }
 
     template <typename relabeler>
-    mdd_type relabel(relabeler l)
+    mdd_type relabel(relabeler& l)
     {
-        return apply<typename factory_type::mdd_rel_relabel>(l);
+        return mdd_type(parent::m_factory, typename factory_type::mdd_rel_relabel(*parent::m_factory)(parent::m_node, l));
     }
 
     /**

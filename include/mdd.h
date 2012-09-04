@@ -3,6 +3,7 @@
 
 #include <mdd_iterator.h>
 #include <mdd_factory.h>
+#include "operations/rel_relabel.h"
 
 namespace mdd
 {
@@ -57,13 +58,14 @@ class mdd
 {
 public:
     friend class mdd_factory<Value>;
+    friend class node_factory<Value>;
 
     typedef mdd_iterator<Value> iterator;
     typedef mdd_iterator<Value> const_iterator;
     typedef Value& reference;
     typedef const Value& const_reference;
     typedef mdd<Value> mdd_type;
-    typedef mdd_factory<Value> factory_type;
+    typedef node_factory<Value> factory_type;
     typedef factory_type* factory_ptr;
     typedef typename mdd_factory<Value>::node_ptr node_ptr;
 protected:
@@ -385,6 +387,12 @@ public:
      */
     mdd_type& operator|=(const mdd_type& other)
     { return apply_in_place<typename factory_type::mdd_set_union>(other.m_node); }
+
+    template <typename relabeler>
+    mdd_type relabel(relabeler l)
+    {
+        return apply<typename factory_type::mdd_rel_relabel>(l);
+    }
 
     /**
      * @brief Constructor.

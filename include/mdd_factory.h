@@ -31,6 +31,7 @@ public:
     friend class mdd_irel<Value>;
     friend class mdd_srel<Value>;
 
+
     /**
      * @brief Returns an empty MDD.
      * @return An mdd::mdd representing the empty set.

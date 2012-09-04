@@ -28,6 +28,7 @@ public:
     struct mdd_set_union;
     struct mdd_set_intersect;
     struct mdd_rel_composition;
+    struct mdd_rel_relabel;
 
     typedef Value value_type;
     typedef const value_type& const_reference;

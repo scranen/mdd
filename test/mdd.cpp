@@ -203,6 +203,117 @@ TEST_F(MDDTest, RelComposition)
     EXPECT_EQ(0, factory.size());
 }
 
+class Relabeler
+{
+    mdd::mdd_factory<int>& m_factory;
+    int m_last[1];
+public:
+    Relabeler(mdd::mdd_factory<int>& factory)
+        : m_factory(factory)
+    {
+        reset();
+    }
+    bool match(size_t level, const mdd::mdd<int>& node)
+    {
+        return level == 2;
+    }
+    mdd::mdd<int> replace(size_t, const mdd::mdd<int>& m)
+    {
+        mdd::mdd<int> result = m_factory.empty_set();
+        result.add_in_place(m_last, m_last + 1);
+        m_last[0]  = m_last[0] + 1;
+        return result;
+    }
+    int num()
+    {
+        return m_last[0];
+    }
+    void reset()
+    {
+        m_last[0] = 0;
+    }
+};
+
+TEST_F(MDDTest, RelRelabel)
+{
+    typedef mdd::mdd_factory<int> factory_t;
+    factory_t factory;
+    int R[8][4]  = { { 0, 0, 1, 1 },
+                     { 0, 0, 1, 2 },
+                     { 0, 1, 1, 1 },
+                     { 0, 1, 1, 2 },
+                     { 0, 2, 0, 0 },
+                     { 0, 2, 0, 1 },
+                     { 0, 3, 0, 0 },
+                     { 0, 3, 0, 2 } };
+
+    EXPECT_EQ(0, factory.size());
+    {
+        mdd::mdd_srel<int> r = factory.empty_srel();
+
+        for (auto v: R)
+            r.add_in_place(v, v + 4);
+
+        Relabeler l(factory);
+        r = r.relabel(l);
+    }
+    factory.clear_cache();
+    factory.clean();
+    EXPECT_EQ(0, factory.size());
+}
+
+TEST_F(MDDTest, Bisimulation)
+{
+    typedef mdd::mdd_factory<int> factory_t;
+    factory_t factory;
+    int AT[6][4]  = { { 0, 0, /* --> */ 0, 1 },
+                      { 0, 0, /* --> */ 1, 0 },
+                      { 0, 1, /* --> */ 1, 0 },
+                      { 1, 0, /* --> */ 1, 0 },
+                      { 1, 1, /* --> */ 0, 1 },
+                      { 1, 1, /* --> */ 1, 0 } };
+    int AL[4][3]  = { { 0, 0, 12 },
+                      { 0, 1, 13 },
+                      { 1, 0, 12 },
+                      { 1, 1, 12 } };
+    int AQ[4][3]  = { { 0, 0, 0 },
+                      { 0, 1, 1 },
+                      { 1, 0, 0 },
+                      { 1, 1, 0 } };
+
+    EXPECT_EQ(0, factory.size());
+    {
+        mdd::mdd_srel<int> L = factory.empty_srel();
+        mdd::mdd_srel<int> P = factory.empty_srel();
+        mdd::mdd_srel<int> sig = factory.empty_srel();
+        mdd::mdd_irel<int> T = factory.empty_irel();
+        int oldn;
+        for (auto v: AL)
+            L.add_in_place(v, v + 3);
+        for (auto v: AT)
+            T.add_in_place(v, v + 4);
+        Relabeler l(factory);
+
+        P = L.relabel(l);
+        oldn = 0;
+        while (l.num() != oldn)
+        {
+            l.reset();
+            oldn = l.num();
+            sig = T.compose(P) | P;
+            P = sig.relabel(l);
+        }
+
+        mdd::mdd_irel<int> Q = factory.empty_irel();
+        for (auto v: AQ)
+            Q.add_in_place(v, v + 3);
+
+        EXPECT_EQ(Q, P);
+    }
+    factory.clear_cache();
+    factory.clean();
+    EXPECT_EQ(0, factory.size());
+}
 
 int main(int argc, char** argv)
 {

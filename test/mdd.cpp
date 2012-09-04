@@ -307,6 +307,11 @@ TEST_F(MDDTest, Bisimulation)
         }
 
         EXPECT_EQ(P(0)(0), P(1)(1));
+        EXPECT_NE(P(0)(0), P(0)(1));
+        EXPECT_NE(P(0)(0), P(1)(0));
+        EXPECT_NE(P(0)(1), P(1)(0));
+        EXPECT_NE(P(0)(1), P(1)(1));
+        EXPECT_NE(P(1)(0), P(1)(1));
     }
     factory.clear_cache();
     factory.clean();

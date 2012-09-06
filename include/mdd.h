@@ -11,6 +11,8 @@
 #include "operations/set_contains.h"
 #include "operations/rel_composition.h"
 #include "operations/rel_relabel.h"
+#include "operations/rel_next.h"
+#include "operations/rel_prev.h"
 
 namespace mdd
 {
@@ -79,10 +81,6 @@ protected:
     factory_ptr m_factory;
     node_ptr m_node;
 
-    mdd(factory_ptr factory, node_ptr node)
-        : m_factory(factory), m_node(node)
-    {}
-
     factory_ptr get_factory(const mdd_type& other)
     {
         return other.m_factory;
@@ -94,6 +92,11 @@ protected:
     }
 
 public:
+
+    mdd(factory_ptr factory, node_ptr node)
+        : m_factory(factory), m_node(node)
+    {}
+
     template<typename Functor, typename... Args>
     inline
     mdd_type apply(Args... args) const
@@ -343,6 +346,11 @@ public:
         }
         while (old != result);
         return result;
+    }
+
+    mdd<Value> operator()(const mdd<Value>& s)
+    {
+        return mdd<Value>(parent::m_factory, typename factory_type::mdd_rel_next(*parent::m_factory)(parent::m_node, parent::get_node(s)));
     }
 
     /**

@@ -31,6 +31,8 @@ public:
     struct mdd_set_contains;
     struct mdd_rel_composition;
     struct mdd_rel_relabel;
+    struct mdd_rel_next;
+    struct mdd_rel_prev;
 
     typedef Value value_type;
     typedef const value_type& const_reference;

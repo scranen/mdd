@@ -72,12 +72,12 @@ private:
     node_ptr compose_i_i(node_ptr a, node_ptr b)
     {
         node_ptr result;
-        order(a, b);
 
         if (a->sentinel())
             return a;
-
         assert(b != m_factory.emptylist());
+        if (b->sentinel())
+            return match_i_i(a->down, b);
 
         if (m_factory.m_cache.lookup(cache_rel_composition_i_i, a, b, result))
             return result->use();

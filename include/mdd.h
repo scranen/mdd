@@ -3,6 +3,13 @@
 
 #include <mdd_iterator.h>
 #include <mdd_factory.h>
+
+#include "operations/add_element.h"
+#include "operations/set_union.h"
+#include "operations/set_minus.h"
+#include "operations/set_intersect.h"
+#include "operations/set_contains.h"
+#include "operations/rel_composition.h"
 #include "operations/rel_relabel.h"
 
 namespace mdd
@@ -162,6 +169,21 @@ public:
     mdd_type& operator|=(const mdd_type& other)
     { return apply_in_place<typename factory_type::mdd_set_union>(other.m_node); }
 
+    /**
+     * @brief Set difference.
+     * @param other The mdd to subtract.
+     * @return This mdd without the elements from \p other.
+     */
+    mdd_type operator-(const mdd_type& other) const
+    { return apply<typename factory_type::mdd_set_minus>(other.m_node); }
+
+    /**
+     * @brief Efficient difference-assignment.
+     * @see operator-()
+     */
+    mdd_type& operator-=(const mdd_type& other)
+    { return apply_in_place<typename factory_type::mdd_set_minus>(other.m_node); }
+
 
     /**
      * @brief Add an iterable to the MDD.
@@ -230,6 +252,13 @@ m += v;    // efficient
         }
         throw std::runtime_error("Key not found.");
     }
+
+    template <typename iterator>
+    bool contains(iterator begin, iterator end) const
+    {
+        return typename factory_type::mdd_set_contains(*m_factory)(m_node, begin, end);
+    }
+
 };
 
 /**

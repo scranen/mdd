@@ -2,6 +2,7 @@
 #define __scranen_mdd_node_h
 
 #include <stdint.h>
+#include <assert.h>
 
 namespace mdd
 {

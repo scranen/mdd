@@ -112,6 +112,24 @@ TEST_F(MDDTest, SetUnion)
     EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
 }
 
+TEST_F(MDDTest, SetDiff)
+{
+    mdd::mdd_factory<std::string> strfactory;
+    EXPECT_EQ(0, strfactory.size());
+    {
+        mdd::mdd<std::string> m1 = strfactory.empty_set(),
+                              m2 = strfactory.empty_set(),
+                              m3 = strfactory.empty_set();
+        m1 += strvec1; // [a]
+        m2 = m1 + strvec2; // [a, b]
+        m3 += strvec2;
+
+        EXPECT_EQ(m3, m2 - m1);
+    }
+    strfactory.clear_cache();
+    strfactory.clean();
+    EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
+}
 
 TEST_F(MDDTest, SetIntersect)
 {

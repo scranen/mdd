@@ -1,6 +1,7 @@
 #ifndef __scranen_mdd_operations_rel_composition_h
 #define __scranen_mdd_operations_rel_composition_h
 
+#include <assert.h>
 #include "node_factory.h"
 #include "set_union.h"
 

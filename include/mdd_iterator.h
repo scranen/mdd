@@ -3,6 +3,7 @@
 
 #include <stack>
 #include <stdexcept>
+#include <vector>
 #include <iterator>
 
 #include "node_factory.h"

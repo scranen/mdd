@@ -26,7 +26,9 @@ public:
 
     struct mdd_add_element;
     struct mdd_set_union;
+    struct mdd_set_minus;
     struct mdd_set_intersect;
+    struct mdd_set_contains;
     struct mdd_rel_composition;
     struct mdd_rel_relabel;
 

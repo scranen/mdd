@@ -26,10 +26,46 @@ struct node_factory<Value>::mdd_rel_prev
         : m_factory(factory)
     { }
 
-    // Compose interleaved relation with non-interleaved relation
     node_ptr operator()(node_ptr r, node_ptr s)
     {
-        // TODO
+        if (r->sentinel())
+            return r;
+        if (s->sentinel())
+            return s;
+
+        node_ptr result;
+        if (m_factory.m_cache.lookup(cache_rel_prev, r, s, result))
+            return result->use();
+
+        node_ptr down = collect(r->down, s);
+        if (down != m_factory.empty())
+            result = m_factory.create(r->value, operator()(r->right, s), down);
+        else
+            result = operator()(r->right, s);
+
+        m_factory.m_cache.store(cache_rel_prev, r, s, result);
+        return result;
+    }
+
+    node_ptr collect(node_ptr r, node_ptr s)
+    {
+        assert(r != m_factory.emptylist());
+        assert(s != m_factory.emptylist());
+        if (r == m_factory.empty())
+            return r;
+        if (s == m_factory.empty())
+            return s;
+        if (r->value < s->value)
+            return collect(r->right, s);
+        if (r->value > s->value)
+            return collect(r, s->right);
+
+        node_ptr down = operator()(r->down, s->down);
+        node_ptr right = collect(r->right, s->right);
+        node_ptr result = typename factory_type::mdd_set_union(m_factory)(down, right);
+        down->unuse();
+        right->unuse();
+        return result;
     }
 };
 

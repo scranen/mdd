@@ -42,12 +42,20 @@ private:
         if (s->sentinel())
             return s;
 
-        if (s->value < r->value)
-            return operator()(r, s->right);
-        if (s->value > r->value)
-            return operator()(r->right, s);
-        return collect(r->down, s);
+        node_ptr result;
+        if (m_factory.m_cache.lookup(cache_rel_next, r, s, result))
+            return result->use();
 
+        if (s->value < r->value)
+            result = operator()(r, s->right);
+        else
+        if (s->value > r->value)
+            result = operator()(r->right, s);
+        else
+            result = collect(r->down, s);
+
+        m_factory.m_cache.store(cache_rel_next, r, s, result);
+        return result;
     }
 
     node_ptr collect(node_ptr r, node_ptr s)

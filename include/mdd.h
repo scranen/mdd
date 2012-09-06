@@ -353,6 +353,11 @@ public:
         return mdd<Value>(parent::m_factory, typename factory_type::mdd_rel_next(*parent::m_factory)(parent::m_node, parent::get_node(s)));
     }
 
+    mdd<Value> pre(const mdd<Value>& s)
+    {
+        return mdd<Value>(parent::m_factory, typename factory_type::mdd_rel_prev(*parent::m_factory)(parent::m_node, parent::get_node(s)));
+    }
+
     /**
      * @brief Relation union.
      * @param other The mdd to merge with.

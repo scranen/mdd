@@ -162,6 +162,39 @@ TEST_F(MDDTest, RelNext)
     EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
 }
 
+
+
+TEST_F(MDDTest, RelPrev)
+{
+    mdd::mdd_factory<int> strfactory;
+    EXPECT_EQ(0, strfactory.size());
+    {
+        int R[4][4] = { {0, 1, 0, 1},  // 00 --> 11
+                        {1, 2, 1, 2},  // 11 --> 22
+                        {0, 2, 0, 2},  // 00 --> 22
+                        {2, 3, 2, 3} };// 22 --> 33
+        int S[2][2] = { {1, 1},
+                        {2, 2} };
+        int N[2][2] = { {0, 0},
+                        {1, 1} };
+        mdd::mdd_irel<int> r = strfactory.empty_irel();
+        mdd::mdd<int> s1 = strfactory.empty_set(),
+                      s2 = strfactory.empty_set();
+
+        for (auto v: R)
+            r.add_in_place(v, v + 4);
+        for (auto v: S)
+            s1.add_in_place(v, v + 2);
+        for (auto v: N)
+            s2.add_in_place(v, v + 2);
+
+        EXPECT_EQ(s2, r.pre(s1));
+    }
+    strfactory.clear_cache();
+    strfactory.clean();
+    EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
+}
+
 TEST_F(MDDTest, SetIntersect)
 {
     mdd::mdd_factory<std::string> strfactory;

@@ -13,7 +13,9 @@ enum cache_operation
     cache_set_intersection,
     cache_rel_composition_i_i,
     cache_rel_composition_i_s,
-    cache_rel_relabel
+    cache_rel_relabel,
+    cache_rel_next,
+    cache_rel_prev
 };
 
 template <typename Node>

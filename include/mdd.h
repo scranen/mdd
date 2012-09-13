@@ -5,10 +5,13 @@
 #include <mdd_factory.h>
 
 #include "operations/add_element.h"
+#include "operations/set_count.h"
+#include "operations/set_project.h"
 #include "operations/set_union.h"
 #include "operations/set_minus.h"
 #include "operations/set_intersect.h"
 #include "operations/set_contains.h"
+#include "operations/set_match_proj.h"
 #include "operations/rel_composition.h"
 #include "operations/rel_relabel.h"
 #include "operations/rel_next.h"
@@ -74,7 +77,7 @@ public:
     typedef Value& reference;
     typedef const Value& const_reference;
     typedef mdd<Value> mdd_type;
-    typedef node_factory<Value> factory_type;
+    typedef mdd_factory<Value> factory_type;
     typedef factory_type* factory_ptr;
     typedef typename mdd_factory<Value>::node_ptr node_ptr;
 protected:
@@ -262,6 +265,27 @@ m += v;    // efficient
         return typename factory_type::mdd_set_contains(*m_factory)(m_node, begin, end);
     }
 
+    template <typename zip_iterator>
+    mdd_type match(zip_iterator begin, zip_iterator end) const
+    {
+        return apply<typename factory_type::mdd_set_match_proj>(begin, end);
+    }
+
+    template <typename iterator>
+    mdd_type project(iterator begin, iterator end) const
+    {
+        return apply<typename factory_type::mdd_set_project>(begin, end);
+    }
+
+    double size()
+    {
+        return typename factory_type::mdd_set_count(*m_factory)(m_node);
+    }
+
+    bool empty()
+    {
+        return  m_node == m_factory->empty();
+    }
 };
 
 /**

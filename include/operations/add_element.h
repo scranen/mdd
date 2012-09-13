@@ -20,7 +20,7 @@ struct node_factory<Value>::mdd_add_element
     { }
 
     template <typename iterator>
-    node_ptr operator()(node_ptr a, iterator begin, iterator end)
+    node_ptr operator()(node_ptr a, const iterator& begin, const iterator& end)
     {
         node_ptr result;
         node_ptr temp;

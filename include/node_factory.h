@@ -25,10 +25,13 @@ public:
     friend class mdd_iterator<Value>;
 
     struct mdd_add_element;
+    struct mdd_set_count;
+    struct mdd_set_project;
     struct mdd_set_union;
     struct mdd_set_minus;
     struct mdd_set_intersect;
     struct mdd_set_contains;
+    struct mdd_set_match_proj;
     struct mdd_rel_composition;
     struct mdd_rel_relabel;
     struct mdd_rel_next;

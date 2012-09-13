@@ -35,7 +35,7 @@ private:
 
     node_ptr next(node_ptr r, node_ptr s)
     {
-        assert(r != m_factory.empty());
+        // assert(r != m_factory.empty());
 
         if (r->sentinel())
             return r;

@@ -10,7 +10,7 @@ namespace mdd
 template <typename Value>
 struct node_factory<Value>::mdd_rel_relabel
 {
-    typedef node_factory<Value> factory_type;
+    typedef mdd_factory<Value> factory_type;
     typedef mdd<Value> mdd_type;
     typedef typename factory_type::node_ptr node_ptr;
     typedef typename factory_type::node_type node_type;

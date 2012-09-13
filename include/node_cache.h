@@ -142,8 +142,8 @@ public:
         return m_stores;
     }
 private:
-    size_type m_misses;
     size_type m_hits;
+    size_type m_misses;
     size_type m_stores;
 };
 

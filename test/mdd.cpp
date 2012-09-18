@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 #include <mdd.h>
+#include <utilities/zip.h>
 #include <algorithm>
 
 namespace std
@@ -136,10 +137,10 @@ TEST_F(MDDTest, RelNext)
     mdd::mdd_factory<int> strfactory;
     EXPECT_EQ(0, strfactory.size());
     {
-        int R[4][4] = { {0, 1, 0, 1},  // 00 --> 11
-                        {1, 2, 1, 2},  // 11 --> 22
-                        {0, 2, 0, 2},  // 00 --> 22
-                        {2, 3, 2, 3} };// 22 --> 33
+        int R[4][2][2] = { { {0, 0}, {1, 1} },
+                           { {1, 1}, {2, 2} },
+                           { {0, 0}, {2, 2} },
+                           { {2, 2}, {3, 3} } };
         int S[2][2] = { {0, 0},
                         {1, 1} };
         int N[2][2] = { {1, 1},
@@ -149,13 +150,13 @@ TEST_F(MDDTest, RelNext)
                       s2 = strfactory.empty_set();
 
         for (auto v: R)
-            r.add_in_place(v, v + 4);
+            r.add_in_place(v[0], v[0] + 2, v[1], v[1] + 2);
         for (auto v: S)
             s1.add_in_place(v, v + 2);
         for (auto v: N)
             s2.add_in_place(v, v + 2);
 
-        EXPECT_EQ(s2, r(s1));
+        EXPECT_EQ(s2, r(s1)) << testing::PrintToString(r);
     }
     strfactory.clear_cache();
     strfactory.clean();
@@ -169,10 +170,10 @@ TEST_F(MDDTest, RelPrev)
     mdd::mdd_factory<int> strfactory;
     EXPECT_EQ(0, strfactory.size());
     {
-        int R[4][4] = { {0, 1, 0, 1},  // 00 --> 11
-                        {1, 2, 1, 2},  // 11 --> 22
-                        {0, 2, 0, 2},  // 00 --> 22
-                        {2, 3, 2, 3} };// 22 --> 33
+        int R[4][2][2] = { { {0, 0}, {1, 1} },
+                           { {1, 1}, {2, 2} },
+                           { {0, 0}, {2, 2} },
+                           { {2, 2}, {3, 3} } };
         int S[2][2] = { {1, 1},
                         {2, 2} };
         int N[2][2] = { {0, 0},
@@ -182,7 +183,7 @@ TEST_F(MDDTest, RelPrev)
                       s2 = strfactory.empty_set();
 
         for (auto v: R)
-            r.add_in_place(v, v + 4);
+            r.add_in_place(v[0], v[0] + 2, v[1], v[1] + 2);
         for (auto v: S)
             s1.add_in_place(v, v + 2);
         for (auto v: N)
@@ -234,14 +235,14 @@ TEST_F(MDDTest, RelComposition)
     typedef mdd::mdd_factory<char> factory_t;
     factory_t factory;
     const int N = 2;
-    char R[4][2 * N] = { { 'a', 'b', 'a', 'b' },  // aa --> bb
-                         { 'b', 'c', 'b', 'c' },  // bb --> cc
-                         { 'b', 'd', 'b', 'd' },  // bb --> dd
-                         { 'c', 'e', 'c', 'e' } };// cc --> ee
-    char E[3][2 * N] = { { 'a', 'c', 'a', 'c' },
-                         { 'a', 'd', 'a', 'd' },
-                         { 'b', 'e', 'b', 'e' } };
-    char c[2 * N] = { 'a', 'e', 'a', 'e' };
+    char R[4][N][N]  = { { {'a', 'a'}, {'b', 'b'} },
+                         { {'b', 'b'}, {'c', 'c'} },
+                         { {'b', 'b'}, {'d', 'd'} },
+                         { {'c', 'c'}, {'e', 'e'} } };
+    char E[3][N][N] =  { { {'a', 'a'}, {'c', 'c'} },
+                         { {'a', 'a'}, {'d', 'd'} },
+                         { {'b', 'b'}, {'e', 'e'} } };
+    char c[N][N]     = { {'a', 'a'}, {'e', 'e'} };
     char S[3][N + 1] = { { 'd', 'd', '1' },
                          { 'e', 'e', '2' },
                          { 'f', 'f', '3' } };
@@ -259,14 +260,14 @@ TEST_F(MDDTest, RelComposition)
                             sresult = factory.empty_srel();
 
         for (auto v: R)
-            rel.add_in_place(v, v + 2 * N);
+            rel.add_in_place(v[0], v[0] + N, v[1], v[1] + N);
         for (auto v: E)
-            result.add_in_place(v, v + 2 * N);
+            result.add_in_place(v[0], v[0] + N, v[1], v[1] + N);
 
         EXPECT_EQ(result, rel.compose(rel));
 
         result |= rel;
-        result.add_in_place(c, c + 2 * N);
+        result.add_in_place(c[0], c[0] + N, c[1], c[1] + N);
 
         EXPECT_EQ(result, rel.closure());
 
@@ -350,12 +351,12 @@ TEST_F(MDDTest, Bisimulation)
 {
     typedef mdd::mdd_factory<int> factory_t;
     factory_t factory;
-    int AT[6][4]  = { { 0, 0, 0, 1 },   // 00 --> 01
-                      { 0, 1, 0, 0 },   // 00 --> 10
-                      { 0, 1, 1, 0 },   // 01 --> 10
-                      { 1, 1, 0, 0 },   // 10 --> 10
-                      { 1, 0, 1, 1 },   // 11 --> 01
-                      { 1, 1, 1, 0 } }; // 11 --> 10
+    int AT[6][2][2]  = { { {0, 0}, {0, 1} },
+                         { {0, 0}, {1, 0} },
+                         { {0, 1}, {1, 0} },
+                         { {1, 0}, {1, 0} },
+                         { {1, 1}, {0, 1} },
+                         { {1, 1}, {1, 0} } };
     int AL[4][3]  = { { 0, 0, 12 },
                       { 0, 1, 13 },
                       { 1, 0, 12 },
@@ -372,7 +373,7 @@ TEST_F(MDDTest, Bisimulation)
         for (auto v: AL)
             L.add_in_place(v, v + 3);
         for (auto v: AT)
-            T.add_in_place(v, v + 4);
+            T.add_in_place(v[0], v[0] + 2, v[1], v[1] + 2);
         Relabeler l(factory);
 
         P0 = L.relabel(l);
@@ -398,6 +399,14 @@ TEST_F(MDDTest, Bisimulation)
     factory.clear_cache();
     factory.clean();
     EXPECT_EQ(0, factory.size());
+}
+
+TEST(UtilityTest, ZipIterator)
+{
+    std::vector<int> a { 0, 2, 4 }, b { 1, 3, 5 }, c { 0, 1, 2, 3, 4, 5 };
+    mdd::utilities::zip<std::vector<int>::iterator> z(a.begin(), a.end(), b.begin(), b.end());
+    std::vector<int> d(z.begin(), z.end());
+    EXPECT_EQ(c, d);
 }
 
 int main(int argc, char** argv)

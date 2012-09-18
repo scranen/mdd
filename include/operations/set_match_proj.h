@@ -40,12 +40,15 @@ private:
                 return match(p->right, oldbegin, end, level);
             if (p->value > *begin)
                 return m_factory.empty();
-            return m_factory.create(p->value, m_factory.empty(), match(p->down, begin + 1, end, level + 1));
+            ++begin;
+            return m_factory.create(p->value, m_factory.empty(), match(p->down, begin, end, level + 1));
         }
         else
         {
             // TODO: make more efficient.
-            return m_factory.create(p->value, match(p->right, begin, end, level), match(p->down, begin + 1, end, level + 1));
+            iterator oldbegin(begin);
+            ++begin;
+            return m_factory.create(p->value, match(p->right, oldbegin, end, level), match(p->down, begin, end, level + 1));
         }
     }
 };

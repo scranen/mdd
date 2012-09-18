@@ -34,14 +34,16 @@ struct node_factory<Value>::mdd_add_element
         else
         if (a->sentinel() || a->value > *begin)
         {
-          temp = operator()(m_factory.empty(), begin + 1, end);
-          result = m_factory.create(*begin, a->use(), temp);
+            iterator next(begin);
+            temp = operator()(m_factory.empty(), ++next, end);
+            result = m_factory.create(*begin, a->use(), temp);
         }
         else
         {
             if (a->value == *begin)
             {
-                temp = operator()(a->down, begin + 1, end);
+                iterator next(begin);
+                temp = operator()(a->down, ++next, end);
                 result = m_factory.create(a->value, a->right->use(), temp);
             }
             else

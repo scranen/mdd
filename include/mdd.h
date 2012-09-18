@@ -4,6 +4,9 @@
 #include <mdd_iterator.h>
 #include <mdd_factory.h>
 
+#include "utilities/zip.h"
+#include "utilities/concat.h"
+
 #include "operations/add_element.h"
 #include "operations/set_count.h"
 #include "operations/set_project.h"
@@ -404,6 +407,36 @@ public:
     mdd_irel(factory_ptr factory, node_ptr node)
         : parent(factory, node)
     {}
+
+    template <typename iterator>
+    mdd_type add(iterator src_begin, iterator src_end, iterator dst_begin, iterator dst_end) const
+    {
+        utilities::zip<iterator> z(src_begin, src_end, dst_begin, dst_end);
+        return apply<typename factory_type::mdd_add_element>(z.begin(), z.end());
+    }
+
+    template <typename iterator>
+    mdd_type& add_in_place(iterator src_begin, iterator src_end, iterator dst_begin, iterator dst_end)
+    {
+        utilities::zip<iterator> z(src_begin, src_end, dst_begin, dst_end);
+        return apply_in_place<typename factory_type::mdd_add_element>(z.begin(), z.end());
+    }
+    /*
+
+    template <typename iterator>
+    mdd_type add(iterator&& src_begin, iterator&& src_end, iterator&& dst_begin, iterator&& dst_end) const
+    {
+        zip<iterator> z(src_begin, src_end, dst_begin, dst_end);
+        return apply<typename factory_type::mdd_add_element>(z.begin(), z.end());
+    }
+
+    template <typename iterator>
+    mdd_type& add_in_place(iterator&& src_begin, iterator&& src_end, iterator&& dst_begin, iterator&& dst_end)
+    {
+        zip<iterator> z(src_begin, src_end, dst_begin, dst_end);
+        return apply_in_place<typename factory_type::mdd_add_element>(z.begin(), z.end());
+    }
+    */
 };
 
 /**

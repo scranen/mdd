@@ -380,6 +380,12 @@ public:
         return mdd<Value>(parent::m_factory, typename factory_type::mdd_rel_next(*parent::m_factory)(parent::m_node, parent::get_node(s)));
     }
 
+    template <typename iterator>
+    mdd<Value> operator()(const mdd<Value>& s, iterator proj_begin, iterator proj_end)
+    {
+        return mdd<Value>(parent::m_factory, typename factory_type::mdd_rel_next(*parent::m_factory)(parent::m_node, parent::get_node(s), proj_begin, proj_end));
+    }
+
     mdd<Value> pre(const mdd<Value>& s)
     {
         return mdd<Value>(parent::m_factory, typename factory_type::mdd_rel_prev(*parent::m_factory)(parent::m_node, parent::get_node(s)));

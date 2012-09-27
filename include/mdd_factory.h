@@ -14,19 +14,28 @@ template <typename Value>
 class mdd_srel;
 
 template <typename Value>
-class mdd_factory : public node_factory<Value>
+class mdd_factory : protected node_factory<Value>
 {
 public:
     typedef node_factory<Value> parent;
     typedef mdd<Value> set_type;
     typedef mdd_irel<Value> irel_type;
     typedef mdd_srel<Value> srel_type;
-    typedef const node<Value>* node_ptr;
+
+    using typename parent::cache_type;
+    using typename parent::node_type;
+    using typename parent::node_ptr;
 
     friend class mdd<Value>;
     friend class mdd_irel<Value>;
     friend class mdd_srel<Value>;
+    friend struct parent::mdd_rel_relabel;
 
+    using parent::size;
+    using parent::clean;
+    using parent::cache_hits;
+    using parent::cache_misses;
+    using parent::clear_cache;
 
     /**
      * @brief Returns an empty MDD.

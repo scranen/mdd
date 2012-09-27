@@ -3,6 +3,9 @@
 
 #include "node.h"
 
+#include <unordered_map>
+#include <tuple>
+
 namespace mdd
 {
 
@@ -23,7 +26,8 @@ struct cacherecord
 {
     typedef const Node* node_ptr;
     typedef cacherecord<Node> record_type;
-    cache_operation m_operation;
+    uintptr_t m_clear : 1;
+    uintptr_t m_operation : sizeof(uintptr_t) * 8 - 1;
     node_ptr m_arg1;
     node_ptr m_arg2;
 
@@ -31,7 +35,7 @@ struct cacherecord
     {
         bool operator()(const record_type& a, const record_type& b) const
         {
-            return (a.m_operation == b.m_operation && a.m_arg1 == b.m_arg1 && a.m_arg2 == b.m_arg2);
+            return a.m_clear || b.m_clear || (a.m_operation == b.m_operation && a.m_arg1 == b.m_arg1 && a.m_arg2 == b.m_arg2);
         }
     };
 
@@ -56,14 +60,14 @@ struct cacherecord
     };
 
     cacherecord(cache_operation op, node_ptr arg1, node_ptr arg2)
-        : m_operation(op), m_arg1(arg1), m_arg2(arg2)
+        :  m_clear(false), m_operation(op), m_arg1(arg1), m_arg2(arg2)
     {
         m_arg1->use();
         m_arg2->use();
     }
 
     cacherecord(const cacherecord& other)
-        : m_operation(other.m_operation), m_arg1(other.m_arg1), m_arg2(other.m_arg2)
+        : m_clear(false), m_operation(other.m_operation), m_arg1(other.m_arg1), m_arg2(other.m_arg2)
     {
         m_arg1->use();
         m_arg2->use();
@@ -88,8 +92,8 @@ public:
     typedef cacherecord<Node> cacherecord_type;
     typedef const Node* node_ptr;
 
-    node_cache()
-        : parent(), m_hits(0), m_misses(0), m_stores(0)
+    node_cache(size_type size=100000)
+        : parent(size), m_hits(0), m_misses(0), m_stores(0)
     { }
 
     void clear()
@@ -105,13 +109,16 @@ public:
     inline
     bool lookup(cache_operation op, node_ptr a, node_ptr b, node_ptr& result)
     {
-        auto it = parent::find(cacherecord_type(op, a, b));
+        cacherecord_type rec(op, a, b);
+        auto it = parent::find(rec);
         if (it != parent::end())
         {
             ++m_hits;
             result = it->second;
             return true;
         }
+        rec.m_clear = true;
+        parent::erase(rec);
         ++m_misses;
         return false;
     }

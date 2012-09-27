@@ -9,6 +9,7 @@
 
 #include "operations/add_element.h"
 #include "operations/set_count.h"
+#include "operations/set_dot.h"
 #include "operations/set_project.h"
 #include "operations/set_union.h"
 #include "operations/set_minus.h"
@@ -19,6 +20,9 @@
 #include "operations/rel_relabel.h"
 #include "operations/rel_next.h"
 #include "operations/rel_prev.h"
+
+// TODO: remove
+#include <iostream>
 
 namespace mdd
 {
@@ -87,20 +91,37 @@ protected:
     factory_ptr m_factory;
     node_ptr m_node;
 
-    factory_ptr get_factory(const mdd_type& other)
+    inline
+    factory_ptr get_factory(const mdd_type& other) const
     {
         return other.m_factory;
     }
 
-    node_ptr get_node(const mdd_type& other)
+    inline
+    node_ptr get_node(const mdd_type& other) const
     {
         return other.m_node;
     }
 
+    inline
+    node_ptr empty() const
+    {
+        return m_factory->empty();
+    }
+
+    inline
+    node_ptr emptylist() const
+    {
+        return m_factory->emptylist();
+    }
 public:
 
     mdd(factory_ptr factory, node_ptr node)
         : m_factory(factory), m_node(node)
+    {}
+
+    mdd(factory_ptr factory)
+        : m_factory(factory), m_node(factory->empty())
     {}
 
     template<typename Functor, typename... Args>
@@ -274,10 +295,9 @@ m += v;    // efficient
         return apply<typename factory_type::mdd_set_match_proj>(begin, end);
     }
 
-    template <typename iterator>
-    mdd_type project(iterator begin, iterator end) const
+    mdd_type project(const projection& projection) const
     {
-        return apply<typename factory_type::mdd_set_project>(begin, end);
+        return apply<typename factory_type::mdd_set_project>(projection);
     }
 
     double size()
@@ -288,6 +308,11 @@ m += v;    // efficient
     bool empty()
     {
         return  m_node == m_factory->empty();
+    }
+
+    std::string dot()
+    {
+        return typename factory_type::mdd_set_dot(*m_factory)(m_node);
     }
 };
 
@@ -380,10 +405,9 @@ public:
         return mdd<Value>(parent::m_factory, typename factory_type::mdd_rel_next(*parent::m_factory)(parent::m_node, parent::get_node(s)));
     }
 
-    template <typename iterator>
-    mdd<Value> operator()(const mdd<Value>& s, iterator proj_begin, iterator proj_end)
+    mdd<Value> operator()(const mdd<Value>& s, projection& proj)
     {
-        return mdd<Value>(parent::m_factory, typename factory_type::mdd_rel_next(*parent::m_factory)(parent::m_node, parent::get_node(s), proj_begin, proj_end));
+        return mdd<Value>(parent::m_factory, typename factory_type::mdd_rel_next(*parent::m_factory)(parent::m_node, parent::get_node(s), proj));
     }
 
     mdd<Value> pre(const mdd<Value>& s)

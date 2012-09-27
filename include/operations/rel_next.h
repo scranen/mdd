@@ -2,7 +2,8 @@
 #define __scranen_mdd_operations_rel_next_h
 
 #include <assert.h>
-#include "mdd_factory.h"
+#include "node_factory.h"
+#include "projection.h"
 
 namespace mdd
 {
@@ -10,7 +11,7 @@ namespace mdd
 template <typename Value>
 struct node_factory<Value>::mdd_rel_next
 {
-    typedef mdd_factory<Value> factory_type;
+    typedef node_factory<Value> factory_type;
     typedef typename factory_type::node_ptr node_ptr;
     typedef typename factory_type::cache_type cache_type;
 
@@ -29,19 +30,76 @@ struct node_factory<Value>::mdd_rel_next
     // Compute states reachable from s using one step of interleaved relation r
     node_ptr operator()(node_ptr r, node_ptr s)
     {
-        return next<false,size_t*>(r, s, nullptr, nullptr, 0);
+        return next(r, s);
     }
 
     // Compute states reachable from s using one step of interleaved partial relation r
-    template <typename iterator>
-    node_ptr operator()(node_ptr r, node_ptr s, iterator proj_begin, iterator proj_end)
+    node_ptr operator()(node_ptr r, node_ptr s, const projection& proj)
     {
-        return next<true,iterator>(r, s, proj_begin, proj_end, 0);
+        if (proj.full())
+            return next(r, s);
+        return next(r, s, proj.begin(), proj.end(), 0);
     }
 private:
 
-    template <bool use_projection, typename iterator>
-    node_ptr next(node_ptr r, node_ptr s, iterator pbegin, iterator pend, size_t level)
+    node_ptr next(node_ptr r, node_ptr s, projection::iterator pbegin, projection::iterator pend, size_t level)
+    {
+        if (r == m_factory.empty())
+            return r;
+        if (r == m_factory.emptylist())
+            return s->use();
+        if (s->sentinel())
+            return s;
+
+        node_ptr result;
+//        if (m_factory.m_cache.lookup(cache_rel_next, r, s, result))
+//            return result->use();
+
+        if (pbegin == pend || *pbegin != level)
+            result = collect_wildcard(r, s, pbegin, pend, level);
+        else
+        if (s->value < r->value)
+            result = next(r, s->right, pbegin, pend, level);
+        else
+        if (s->value > r->value)
+            result = next(r->right, s, pbegin, pend, level);
+        else
+        {
+            node_ptr right = next(r->right, s->right, pbegin, pend, level);
+            node_ptr down = collect(r->down, s, ++pbegin, pend, level);
+            result = typename factory_type::mdd_set_union(m_factory)(right, down);
+            right->unuse();
+            down->unuse();
+        }
+
+//        m_factory.m_cache.store(cache_rel_next, r, s, result);
+        return result;
+    }
+
+    node_ptr collect_wildcard(node_ptr r, node_ptr s, projection::iterator pbegin, projection::iterator pend, size_t level)
+    {
+        if (s->sentinel())
+            return s;
+
+        return m_factory.create(s->value,
+                                collect_wildcard(r, s->right, pbegin, pend, level),
+                                next(r, s->down, pbegin, pend, level + 1));
+    }
+
+    node_ptr collect(node_ptr r, node_ptr s, projection::iterator pbegin, projection::iterator pend, size_t level)
+    {
+        assert(!s->sentinel());
+
+        if (r->sentinel())
+            return r;
+
+        return m_factory.create(r->value,
+                                collect(r->right, s, pbegin, pend, level),
+                                next(r->down, s->down, pbegin, pend, level + 1));
+    }
+
+
+    node_ptr next(node_ptr r, node_ptr s)
     {
         if (r == m_factory.empty())
             return r;
@@ -54,45 +112,41 @@ private:
         if (m_factory.m_cache.lookup(cache_rel_next, r, s, result))
             return result->use();
 
-        if (use_projection && (pbegin == pend || *pbegin != level))
-            result = collect_wildcard<use_projection,iterator>(r, s, pbegin, pend, level);
-        else
         if (s->value < r->value)
-            result = next<use_projection,iterator>(r, s->right, pbegin, pend, level);
+            result = next(r, s->right);
         else
         if (s->value > r->value)
-            result = next<use_projection,iterator>(r->right, s, pbegin, pend, level);
+            result = next(r->right, s);
         else
-            result = collect<use_projection,iterator>(r->down, s, ++pbegin, pend, level);
+        {
+            node_ptr right = next(r->right, s->right);
+            node_ptr down = collect(r->down, s);
+            result = typename factory_type::mdd_set_union(m_factory)(right, down);
+            right->unuse();
+            down->unuse();
+        }
 
         m_factory.m_cache.store(cache_rel_next, r, s, result);
         return result;
     }
 
-    template <bool use_projection, typename iterator>
-    node_ptr collect_wildcard(node_ptr r, node_ptr s, iterator pbegin, iterator pend, size_t level)
+    node_ptr collect_wildcard(node_ptr r, node_ptr s)
     {
         if (s->sentinel())
             return s;
 
-        return m_factory.create(s->value,
-                                collect_wildcard<use_projection,iterator>(r, s->right, pbegin, pend, level),
-                                next<use_projection,iterator>(r, s->down, pbegin, pend, level + 1));
+        return m_factory.create(s->value, collect_wildcard(r, s->right), next(r, s->down));
     }
 
-    template <bool use_projection, typename iterator>
-    node_ptr collect(node_ptr r, node_ptr s, iterator pbegin, iterator pend, size_t level)
+    node_ptr collect(node_ptr r, node_ptr s)
     {
         assert(!s->sentinel());
 
         if (r->sentinel())
             return r;
 
-        return m_factory.create(r->value,
-                                collect<use_projection,iterator>(r->right, s, pbegin, pend, level),
-                                next<use_projection,iterator>(r->down, s->down, pbegin, pend, level + 1));
+        return m_factory.create(r->value, collect(r->right, s), next(r->down, s->down));
     }
-
 };
 
 }

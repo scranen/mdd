@@ -3,6 +3,7 @@
 
 #include "node_factory.h"
 #include "set_union.h"
+#include "projection.h"
 
 namespace mdd
 {
@@ -19,26 +20,29 @@ struct node_factory<Value>::mdd_set_project
         : m_factory(factory)
     { }
 
-    template <typename iterator>
-    node_ptr operator()(node_ptr p, iterator begin, const iterator& end)
+    node_ptr operator()(node_ptr a, const projection& projection)
     {
-        return project(p, begin, end, 0);
+        return project(a, projection.begin(), projection.end(), 0);
     }
 private:
     template <typename iterator>
-    node_ptr project(node_ptr p, iterator& begin, const iterator& end, int level)
+    node_ptr project(node_ptr p, iterator begin, const iterator& end, size_t level)
     {
-        if (p->sentinel())
-            return p;
         if (begin == end)
             return m_factory.emptylist();
+        if (p->sentinel())
+            return m_factory.empty();
+
         if (*begin == level)
-            return m_factory.create(p->value, project(p->right, begin, end, level), project(p->down, ++begin, end, level + 1));
+        {
+            iterator oldbegin = begin++;
+            return m_factory.create(p->value, project(p->right, oldbegin, end, level), project(p->down, begin, end, level + 1));
+        }
         return collect(p, begin, end, level);
     }
 
     template <typename iterator>
-    node_ptr collect(node_ptr p, iterator& begin, const iterator& end, int level)
+    node_ptr collect(node_ptr p, iterator& begin, const iterator& end, size_t level)
     {
         if (p->sentinel())
             return p;

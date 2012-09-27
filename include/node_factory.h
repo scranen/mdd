@@ -26,6 +26,7 @@ public:
 
     struct mdd_add_element;
     struct mdd_set_count;
+    struct mdd_set_dot;
     struct mdd_set_project;
     struct mdd_set_union;
     struct mdd_set_minus;
@@ -49,7 +50,7 @@ private:
     hashtable m_nodes;
     cache_type m_cache;
     node_type m_sentinels[2];
-protected:
+public:
 
     /*************************************************************************************************
      * Memory management operations and node creation.
@@ -92,7 +93,6 @@ protected:
         return newnode;
     }
 
-public:
     /**
      * @brief Constructor.
      */

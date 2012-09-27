@@ -1,9 +1,14 @@
 // #define DEBUG_MDD_NODES
 
-#include <gtest/gtest.h>
-#include <mdd.h>
-#include <utilities/zip.h>
 #include <algorithm>
+
+#include <gtest/gtest.h>
+
+#include "mdd.h"
+#include "utilities/zip.h"
+#include "projection.h"
+
+#include <fstream>
 
 namespace std
 {
@@ -124,8 +129,8 @@ TEST_F(MDDTest, SetDiff)
         m1 += strvec1; // [a]
         m2 = m1 + strvec2; // [a, b]
         m3 += strvec2;
-
-        EXPECT_EQ(m3, m2 - m1);
+        m1 = m2 - m1;
+        EXPECT_EQ(m3, m1);
     }
     strfactory.clear_cache();
     strfactory.clean();
@@ -163,7 +168,56 @@ TEST_F(MDDTest, RelNext)
     EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
 }
 
+TEST_F(MDDTest, PartialRelNext)
+{
+    mdd::mdd_factory<int> strfactory;
+    mdd::projection_factory projfactory;
+    EXPECT_EQ(0, strfactory.size());
+    {
+        int R[2][2][4] = { { {9, 0, 0, 0}, {4, 1, 0, 0} },
+                           { {9, 0, 0, 1}, {4, 1, 1, 1} } };
+        int S[10][13] = {{ 3, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0 },
+                         { 3, 2, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1 },
+                         { 3, 2, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0 },
+                         { 3, 2, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1 },
+                         { 5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                         { 5, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                         { 5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                         { 5, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
+                         { 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                         { 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 } };
 
+        int N[2][13] = { {4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                         {4, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1} };
+        int P[4] = {0, 1, 2, 12};
+        mdd::projection proj = projfactory.create(P, P + 4);
+        mdd::mdd_irel<int> r = strfactory.empty_irel();
+        mdd::mdd<int> s1 = strfactory.empty_set(),
+                      s2 = strfactory.empty_set();
+
+        for (auto v: R)
+            r.add_in_place(v[0], v[0] + 4, v[1], v[1] + 4);
+        for (auto v: S)
+            s1.add_in_place(v, v + 13);
+        for (auto v: N)
+            s2.add_in_place(v, v + 13);
+
+        std::ofstream lvl("/tmp/lvl.dot");
+        std::ofstream nxt("/tmp/nxt.dot");
+        std::ofstream res("/tmp/res.dot");
+        lvl << s1.dot();
+        lvl.close();
+        nxt << r.dot();
+        nxt.close();
+        res << r(s1, proj).dot();
+        res.close();
+
+        EXPECT_EQ(s2, r(s1, proj)) << testing::PrintToString(r);
+    }
+    strfactory.clear_cache();
+    strfactory.clean();
+    EXPECT_EQ(0, strfactory.size()) << strfactory.print_nodes();
+}
 
 TEST_F(MDDTest, RelPrev)
 {
@@ -319,6 +373,17 @@ public:
     }
 };
 
+TEST_F(MDDTest, Iterator)
+{
+    typedef mdd::mdd_factory<int> factory_t;
+    factory_t factory;
+    mdd::mdd<int> m = factory.empty_set();
+    for (auto x: m)
+    {
+        throw std::runtime_error(testing::PrintToString(x));
+    }
+}
+
 TEST_F(MDDTest, RelRelabel)
 {
     typedef mdd::mdd_factory<int> factory_t;
@@ -407,6 +472,17 @@ TEST(UtilityTest, ZipIterator)
     mdd::utilities::zip<std::vector<int>::iterator> z(a.begin(), a.end(), b.begin(), b.end());
     std::vector<int> d(z.begin(), z.end());
     EXPECT_EQ(c, d);
+}
+
+TEST_F(MDDTest, Projection)
+{
+    size_t list[3] = { 0, 1, 3 };
+    mdd::projection_factory f;
+    mdd::projection p = f.create(list, list + 3);
+    std::vector<size_t> v(p.begin(), p.end());
+    EXPECT_EQ(0, v[0]);
+    EXPECT_EQ(1, v[1]);
+    EXPECT_EQ(3, v[2]);
 }
 
 int main(int argc, char** argv)

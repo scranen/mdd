@@ -69,6 +69,8 @@ public:
      */
     node_ptr create(const_reference val, node_ptr right, node_ptr down)
     {
+        if (down == empty())
+            return right;
         node_ptr newnode = new node_type(val, right, down, 1);
         auto result = m_nodes.insert(newnode);
         if (!result.second)

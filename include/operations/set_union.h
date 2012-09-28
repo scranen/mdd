@@ -39,22 +39,12 @@ struct node_factory<Value>::mdd_set_union
             return result->use();
 
         if (a->value < b->value)
-        {
-            node_ptr temp = operator()(a->right, b);
-            result = m_factory.create(a->value, temp, a->down->use());
-        }
+            result = m_factory.create(a->value, operator()(a->right, b), a->down->use());
         else
         if (a->value > b->value)
-        {
-            node_ptr temp = operator()(a, b->right);
-            result = m_factory.create(b->value, temp, b->down->use());
-        }
+            result = m_factory.create(b->value, operator()(a, b->right), b->down->use());
         else
-        {
-            node_ptr temp1 = operator()(a->right, b->right),
-                     temp2 = operator()(a->down, b->down);
-            result = m_factory.create(a->value, temp1, temp2);
-        }
+            result = m_factory.create(a->value, operator()(a->right, b->right), operator()(a->down, b->down));
 
         m_factory.m_cache.store(cache_set_union, a, b, result);
         return result;

@@ -52,8 +52,8 @@ private:
             return s;
 
         node_ptr result;
-//        if (m_factory.m_cache.lookup(cache_rel_next, r, s, result))
-//            return result->use();
+        if (m_factory.m_cache.lookup(cache_rel_next, r, s, pbegin.node(), result))
+            return result->use();
 
         if (pbegin == pend || *pbegin != level)
             result = collect_wildcard(r, s, pbegin, pend, level);
@@ -72,7 +72,7 @@ private:
             down->unuse();
         }
 
-//        m_factory.m_cache.store(cache_rel_next, r, s, result);
+        m_factory.m_cache.store(cache_rel_next, r, s, pbegin.node(), result);
         return result;
     }
 

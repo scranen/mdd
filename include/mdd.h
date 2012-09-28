@@ -305,6 +305,11 @@ m += v;    // efficient
         return typename factory_type::mdd_set_count(*m_factory)(m_node);
     }
 
+    double size(size_t& nodes)
+    {
+        return typename factory_type::mdd_set_count(*m_factory)(m_node, nodes);
+    }
+
     bool empty()
     {
         return  m_node == m_factory->empty();

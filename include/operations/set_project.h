@@ -25,24 +25,32 @@ struct node_factory<Value>::mdd_set_project
         return project(a, projection.begin(), projection.end(), 0);
     }
 private:
-    template <typename iterator>
-    node_ptr project(node_ptr p, iterator begin, const iterator& end, size_t level)
+    node_ptr project(node_ptr p, const projection::iterator& begin, const projection::iterator& end, size_t level)
     {
         if (begin == end)
             return m_factory.emptylist();
         if (p->sentinel())
             return m_factory.empty();
 
+        node_ptr result;
+        if (m_factory.m_cache.lookup(cache_set_project, p, nullptr, begin.node(), result))
+            return result->use();
+
         if (*begin == level)
         {
-            iterator oldbegin = begin++;
-            return m_factory.create(p->value, project(p->right, oldbegin, end, level), project(p->down, begin, end, level + 1));
+            projection::iterator newbegin = begin;
+            ++newbegin;
+            result = m_factory.create(p->value, project(p->right, begin, end, level), project(p->down, newbegin, end, level + 1));
         }
-        return collect(p, begin, end, level);
+        else
+            result = collect(p, begin, end, level);
+
+        m_factory.m_cache.store(cache_set_project, p, nullptr, begin.node(), result);
+
+        return result;
     }
 
-    template <typename iterator>
-    node_ptr collect(node_ptr p, iterator& begin, const iterator& end, size_t level)
+    node_ptr collect(node_ptr p, const projection::iterator& begin, const projection::iterator& end, size_t level)
     {
         if (p->sentinel())
             return p;

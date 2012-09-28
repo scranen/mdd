@@ -44,13 +44,7 @@ struct node_factory<Value>::mdd_set_minus
         if (a->value < b->value)
             result = m_factory.create(a->value, operator()(a->right, b), a->down->use());
         else // a->value == b->value
-        {
-            result = operator()(a->down, b->down);
-            if (result != m_factory.empty())
-                result = m_factory.create(a->value, operator()(a->right, b->right), result);
-            else
-                result = operator()(a->right, b->right);
-        }
+            result = m_factory.create(a->value, operator()(a->right, b->right), operator()(a->down, b->down));
 
         m_factory.m_cache.store(cache_set_minus, a, b, result);
         return result;

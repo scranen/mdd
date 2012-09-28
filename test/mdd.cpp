@@ -485,6 +485,18 @@ TEST_F(MDDTest, Projection)
     EXPECT_EQ(3, v[2]);
 }
 
+TEST(Randoms, CacheRecord)
+{
+    typedef mdd::cacherecord<mdd::node<int> > rectype;
+    mdd::node_factory<int> f;
+    rectype rec1(mdd::cache_set_union, f.empty(), f.empty(), nullptr);
+    rectype rec2(rec1);
+    rectype rec3(mdd::cache_set_union, f.emptylist(), f.emptylist(), nullptr);
+    rec2.make_clear_operation();
+    EXPECT_EQ(rectype::hash()(rec1), rectype::hash()(rec2));
+    EXPECT_EQ(true, rectype::equal()(rec2, rec3));
+}
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);

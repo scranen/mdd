@@ -29,10 +29,11 @@ public:
     public:
         iterator& operator++() { m_node = m_node->down; return *this; }
         iterator operator++(int) { iterator it(m_node); operator++(); return it; }
-        size_t operator*() { return m_node->value; }
+        size_t operator*() const { return m_node->value; }
         const size_t* operator->() { return &m_node->value; }
         bool operator==(const iterator& other) const { return m_node == other.m_node; }
         bool operator!=(const iterator& other) const { return m_node != other.m_node; }
+        node_ptr node() const { return m_node; }
     };
 
     iterator begin() const

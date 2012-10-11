@@ -3,6 +3,7 @@
 
 #include "node_factory.h"
 #include "add_element.h"
+#include "projection.h"
 
 namespace mdd
 {
@@ -22,33 +23,32 @@ struct node_factory<Value>::mdd_set_match_proj
     { }
 
     template <typename iterator>
-    node_ptr operator()(node_ptr p, iterator begin, iterator end) const
+    node_ptr operator()(node_ptr p, projection::iterator pbegin, projection::iterator pend, iterator vbegin) const
     {
-        return match(p, begin, end, 0);
+        return match(p, pbegin, pend, vbegin);
     }
 private:
     template <typename iterator>
-    node_ptr match(node_ptr p, iterator begin, iterator end, size_t level) const
+    node_ptr match(node_ptr p, projection::iterator pbegin, projection::iterator pend, iterator vbegin) const
     {
-        if (begin == end)
+        if (pbegin == pend)
             return p->use();
-        assert(level >= *begin);
-        if (level == *begin)
+        if (*pbegin)
         {
-            iterator oldbegin(begin);
-            if (p->value < *++begin)
-                return match(p->right, oldbegin, end, level);
-            if (p->value > *begin)
+            if (p->value < *vbegin)
+                return match(p->right, pbegin, pend, vbegin);
+            if (p->value > *vbegin)
                 return m_factory.empty();
-            ++begin;
-            return m_factory.create(p->value, m_factory.empty(), match(p->down, begin, end, level + 1));
+            ++pbegin;
+            ++vbegin;
+            return m_factory.create(p->value, m_factory.empty(), match(p->down, pbegin, pend, vbegin));
         }
         else
         {
-            // TODO: make more efficient.
-            iterator oldbegin(begin);
-            ++begin;
-            return m_factory.create(p->value, match(p->right, oldbegin, end, level), match(p->down, begin, end, level + 1));
+            node_ptr right = match(p->right, pbegin, pend, vbegin);
+            ++pbegin;
+            node_ptr down = match(p->down, pbegin, pend, vbegin);
+            return m_factory.create(p->value, right, down);
         }
     }
 };

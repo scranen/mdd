@@ -1,6 +1,8 @@
 // #define DEBUG_MDD_NODES
 
 #include <algorithm>
+#include <vector>
+#include <list>
 
 #include <gtest/gtest.h>
 
@@ -190,7 +192,7 @@ TEST_F(MDDTest, PartialRelNext)
         int N[2][13] = { {4, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
                          {4, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1} };
         int P[4] = {0, 1, 2, 12};
-        mdd::projection proj = projfactory.create(P, P + 4);
+        mdd::projection proj = projfactory.create(P, P + 4, 13);
         mdd::mdd_irel<int> r = strfactory.empty_irel();
         mdd::mdd<int> s1 = strfactory.empty_set(),
                       s2 = strfactory.empty_set();
@@ -412,7 +414,7 @@ TEST_F(MDDTest, RelRelabel)
     EXPECT_EQ(0, factory.size());
 }
 
-TEST_F(MDDTest, Bisimulation)
+TEST_F(MDDTest, BisimSignatures)
 {
     typedef mdd::mdd_factory<int> factory_t;
     factory_t factory;
@@ -466,6 +468,75 @@ TEST_F(MDDTest, Bisimulation)
     EXPECT_EQ(0, factory.size());
 }
 
+TEST_F(MDDTest, BisimKanellakisSmolka)
+{
+    typedef mdd::mdd_factory<int> factory_t;
+    factory_t factory;
+    int AT[6][2][2]  = { { {0, 0}, {0, 1} },
+                         { {0, 0}, {1, 0} },
+                         { {0, 1}, {1, 0} },
+                         { {1, 0}, {1, 0} },
+                         { {1, 1}, {0, 1} },
+                         { {1, 1}, {1, 0} } };
+    int P0_0[3][3]  = { { 0, 0 },
+                        { 1, 0 },
+                        { 1, 1 } };
+    int P0_1[1][3]  = { { 0, 1 } };
+    int PN_2[1][3]  = { { 1, 0 } };
+
+    EXPECT_EQ(0, factory.size());
+    {
+        mdd::mdd_irel<int> T = factory.empty_irel();
+        std::vector<mdd::mdd<int> > partitions;
+        std::vector<mdd::mdd<int> > expected;
+        mdd::mdd<int> p[3] = { factory.empty_set(), factory.empty_set(), factory.empty_set() };
+
+        for (auto v: AT)
+            T.add_in_place(v[0], v[0] + 2, v[1], v[1] + 2);
+
+        for (auto v: P0_0)
+          p[0].add_in_place(v, v + 2);
+        for (auto v: P0_1)
+          p[1].add_in_place(v, v + 2);
+        for (auto v: PN_2)
+          p[2].add_in_place(v, v + 2);
+        partitions.push_back(p[0]);
+        partitions.push_back(p[1]);
+        expected.push_back(p[0] - p[2]);
+        expected.push_back(p[1]);
+        expected.push_back(p[2]);
+
+        auto splitter = partitions.begin();
+        while (splitter != partitions.end())
+        {
+            mdd::mdd<int> p = T.pre(*splitter);
+            for (auto& b: partitions)
+            {
+                mdd::mdd<int> pb = p & b;
+                if (!pb.empty() && pb != b)
+                {
+                    mdd::mdd<int> diff = b - pb;
+                    b = pb;
+                    partitions.push_back(diff);
+                    splitter = partitions.end();
+                    break;
+                }
+            }
+            if (splitter == partitions.end())
+                splitter = partitions.begin();
+            else
+                ++splitter;
+        }
+
+        std::sort(expected.begin(), expected.end(), [](const mdd::mdd<int>& x, const mdd::mdd<int>& y){ return x.id() < y.id(); });
+        std::sort(partitions.begin(), partitions.end(), [](const mdd::mdd<int>& x, const mdd::mdd<int>& y){ return x.id() < y.id(); });
+        EXPECT_EQ(expected, partitions);
+    }
+    factory.clear_cache();
+    factory.clean();
+    EXPECT_EQ(0, factory.size());
+}
+
 TEST(UtilityTest, ZipIterator)
 {
     std::vector<int> a { 0, 2, 4 }, b { 1, 3, 5 }, c { 0, 1, 2, 3, 4, 5 };
@@ -478,11 +549,13 @@ TEST_F(MDDTest, Projection)
 {
     size_t list[3] = { 0, 1, 3 };
     mdd::projection_factory f;
-    mdd::projection p = f.create(list, list + 3);
-    std::vector<size_t> v(p.begin(), p.end());
-    EXPECT_EQ(0, v[0]);
-    EXPECT_EQ(1, v[1]);
-    EXPECT_EQ(3, v[2]);
+    mdd::projection p = f.create(list, list + 3, 4);
+    std::vector<bool> v(p.begin(), p.end());
+    EXPECT_EQ(true,  v[0]);
+    EXPECT_EQ(true,  v[1]);
+    EXPECT_EQ(false, v[2]);
+    EXPECT_EQ(true,  v[3]);
+    EXPECT_EQ(4, v.size());
 }
 
 TEST(Randoms, CacheRecord)

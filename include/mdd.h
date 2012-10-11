@@ -271,6 +271,9 @@ m += v;    // efficient
     iterator end() const
     { return iterator(m_factory); }
 
+    uintptr_t id() const
+    { return (uintptr_t)m_node; }
+
     mdd_type operator()(const Value& v)
     {
         node_ptr p = m_node;
@@ -289,10 +292,10 @@ m += v;    // efficient
         return typename factory_type::mdd_set_contains(*m_factory)(m_node, begin, end);
     }
 
-    template <typename zip_iterator>
-    mdd_type match(zip_iterator begin, zip_iterator end) const
+    template <typename value_iterator>
+    mdd_type match(projection::iterator pbegin, projection::iterator pend, value_iterator vbegin) const
     {
-        return apply<typename factory_type::mdd_set_match_proj>(begin, end);
+        return apply<typename factory_type::mdd_set_match_proj>(pbegin, pend, vbegin);
     }
 
     mdd_type project(const projection& projection) const

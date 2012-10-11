@@ -22,10 +22,10 @@ struct node_factory<Value>::mdd_set_project
 
     node_ptr operator()(node_ptr a, const projection& projection)
     {
-        return project(a, projection.begin(), projection.end(), 0);
+        return project(a, projection.begin(), projection.end());
     }
 private:
-    node_ptr project(node_ptr p, const projection::iterator& begin, const projection::iterator& end, size_t level)
+    node_ptr project(node_ptr p, const projection::iterator& begin, const projection::iterator& end)
     {
         if (begin == end)
             return m_factory.emptylist();
@@ -36,25 +36,25 @@ private:
         if (m_factory.m_cache.lookup(cache_set_project, p, nullptr, begin.node(), result))
             return result->use();
 
-        if (*begin == level)
+        if (*begin)
         {
             projection::iterator newbegin = begin;
             ++newbegin;
-            result = m_factory.create(p->value, project(p->right, begin, end, level), project(p->down, newbegin, end, level + 1));
+            result = m_factory.create(p->value, project(p->right, begin, end), project(p->down, newbegin, end));
         }
         else
-            result = collect(p, begin, end, level);
+            result = collect(p, begin, end);
 
         m_factory.m_cache.store(cache_set_project, p, nullptr, begin.node(), result);
 
         return result;
     }
 
-    node_ptr collect(node_ptr p, const projection::iterator& begin, const projection::iterator& end, size_t level)
+    node_ptr collect(node_ptr p, const projection::iterator& begin, const projection::iterator& end)
     {
         if (p->sentinel())
             return p;
-        return typename factory_type::mdd_set_union(m_factory)(project(p->down, begin, end, level + 1), collect(p->right, begin, end, level));
+        return typename factory_type::mdd_set_union(m_factory)(project(p->down, begin, end), collect(p->right, begin, end));
     }
 };
 

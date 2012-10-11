@@ -42,6 +42,11 @@ struct cacherecord : public std::tuple<uintptr_t, const Node*, const Node*, cons
         std::get<0>(*this) |= cache_clear;
     }
 
+    void make_insert_operation()
+    {
+        std::get<0>(*this) &= ~cache_clear;
+    }
+
     struct hash{
         unsigned int operator()(const record_type& r) const
         {
@@ -58,7 +63,7 @@ struct cacherecord : public std::tuple<uintptr_t, const Node*, const Node*, cons
     {
         bool operator()(const record_type& a, const record_type& b) const
         {
-            return (std::get<0>(a) & cache_clear)  || (std::get<0>(b) & cache_clear) || (a == b);
+            return (a == b) || (std::get<0>(a) & cache_clear)  || (std::get<0>(b) & cache_clear);
         }
     };
 
@@ -136,8 +141,6 @@ public:
             result = it->second;
             return true;
         }
-        rec.make_clear_operation();
-        parent::erase(rec);
         ++m_misses;
         return false;
     }
@@ -151,7 +154,13 @@ public:
     inline
     void store(cache_operation op, node_ptr a, node_ptr b, proj_ptr c, node_ptr result)
     {
-        parent::insert(std::move(std::make_pair(cacherecord_type(op, a, b, c), result->use())));
+        cacherecord_type rec(op, a, b, c);
+        // First, clear the bucket
+        rec.make_clear_operation();
+        parent::erase(rec);
+        rec.make_insert_operation();
+        // Then insert.
+        parent::insert(std::move(std::make_pair(std::move(rec), std::move(result->use()))));
         ++m_stores;
     }
 
